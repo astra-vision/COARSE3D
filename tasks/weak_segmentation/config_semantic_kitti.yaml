@@ -1,0 +1,154 @@
+# --------------------------------
+# common config ------------------
+# --------------------------------
+save_path: "../../experiments/semantic-kitti/"
+seed: 1
+gpu: "1"
+weak_label: True
+distributed: True
+is_debug: False
+pycharm: False
+master_addr: "127.0.0.1"
+master_port: "63445"
+print_frequency: 10
+n_threads: 0
+experiment_id: "v1.0" # you can set by yourself
+
+# --------------------------------
+# contrastive config -------------
+# --------------------------------
+contrast_warmup: 5 # default: 5
+loss_w_contrast: 0.1
+temperature: 0.07
+num_anchor: 512
+entropy_selection: true
+sub_proto_size: 20
+proto_momentum: 0.999
+
+# --------------------------------
+# training config ----------------
+# --------------------------------
+val_only: false
+n_epochs: 100
+batch_size: [4, 4] # [train batch size, validation batch size], default: [4, 4]
+lr: 0.01
+warmup_epochs: 1
+momentum: 0.9
+val_frequency: 1
+weight_decay: 0.00001
+
+optimizer: "Adam"
+loss_w_ce_2d: 1.0
+loss_w_lov_2d: 1.0
+
+# checkpoint model ---------------------
+checkpoint: null
+epoch_start: 0
+pretrained_model: '/mnt/cephfs/home/lirong/code/COARSE3D/best_Acc_model.pth' # ImageNet pretrained model
+only_encoder: True
+
+
+# --------------------------------
+# dataset config -----------------
+# --------------------------------
+
+dataset: "SemanticKitti"
+data_len: -1
+n_classes: 20
+ignore_cls: 0
+data_config_path: "../../pc_processor/dataset/semantic_kitti/semantic-kitti.yaml"
+
+pcd_root: '/mnt/cephfs/dataset/pointclouds/semantic-kitti/dataset/sequences/'
+weak_root: '/mnt/cephfs/dataset/pointclouds/semantic-kitti-grid-sample/sequences/'  # dataset_save
+weak_label_name: '0.1' # the dir name you set in the data preparation stages
+
+train_seq: [0,1,2,3,4,5,6,7,9,10]
+val_seq: [8]
+
+# 0.1% class ratio
+cls_counts:
+  0: 0.0
+  1: 1877
+  2: 9
+  3: 10
+  4: 80
+  5: 130
+  6: 22
+  7: 23
+  8: 2
+  9: 7809
+  10: 542
+  11: 5425
+  12: 205
+  13: 7718
+  14: 2856
+  15: 15575
+  16: 334
+  17: 4564
+  18: 148
+  19: 38
+
+# --------------------------------
+# model config -------------------
+# --------------------------------
+net_type: "SalsaNextProto"
+encoder_modules_path: "../../pc_processor/models/encoder_module.yaml"
+input_channels: 5 # depth, x, y, z, ref
+
+# --------------------------------
+# augmentation config --------------
+# --------------------------------
+
+augmentation:
+  # flip
+  p_flipx: 0.
+  p_flipy: 0.5
+
+  # translation
+  p_transx: 0.5
+  trans_xmin: -5
+  trans_xmax: 5
+  p_transy: 0.5
+  trans_ymin: -3
+  trans_ymax: 3
+  p_transz: 0.5
+  trans_zmin: -1
+  trans_zmax: 0.
+
+  # rotation
+  p_rot_roll: 0.5
+  rot_rollmin: -5
+  rot_rollmax: 5
+  p_rot_pitch: 0.5
+  rot_pitchmin: -5
+  rot_pitchmax: 5
+  p_rot_yaw: 0.5
+  rot_yawmin: 5
+  rot_yawmax: -5
+
+# --------------------------------
+# sensor config ------------------
+# --------------------------------
+
+sensor:
+  name: "HDL64"
+  type: "spherical"
+  proj_h: 64
+  proj_w: 2048
+  fov_up: 3.
+  fov_down: -25.
+  fov_left: -180
+  fov_right: 180
+  img_mean: # range, x, y, z, ref
+    - 12.12
+    - 10.88
+    - 0.23
+    - -1.04
+    - 0.21
+  img_stds:
+    - 12.32
+    - 11.47
+    - 6.91
+    - 0.86
+    - 0.16
+

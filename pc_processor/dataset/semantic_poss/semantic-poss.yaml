@@ -1,0 +1,137 @@
+name: "semantic-poss"
+labels:
+  0: "unlabeled"
+  4: "1 people"
+  5: "2+ people"
+  6: "rider"
+  7: "car"
+  8: "trunk"
+  9: "plants"
+  10: "traffic sign 1" # standing sign
+  11: "traffic sign 2" # hanging sign
+  12: "traffic sign 3" # high/big hanging sign
+  13: "pole"
+  14: "trashcan"
+  15: "building"
+  16: "cone/stone"
+  17: "fence"
+  21: "bike"
+  22: "road" # class definition
+
+color_map: # bgr
+  0: [0, 0, 0]  # 0: "unlabeled"
+  1: [0, 0, 0]  # don't care
+  2: [0, 0, 0]  # don't care
+  3: [0, 0, 0]  # don't care
+  4: [255, 30, 30]  # 4: "1 people"
+  5: [255, 30, 30]  # 5: "2+ people"
+  6: [255, 40, 200]  # 6: "rider"
+  7: [100, 150, 245]  # 7: "car"
+  8: [135, 60, 0]  # 8: "trunk"
+  9: [0, 175, 0]  # 9: "plants"
+  10: [255, 0, 0]  # 10: "traffic sign 1"
+  11: [255, 0, 0]  # 11: "traffic sign 2"
+  12: [255, 0, 0]  # 12: "traffic sign 3"
+  13: [255, 240, 150]  # 13: "pole"
+  14: [125, 255, 0]  # 14: "trashcan"
+  15: [255, 200, 0]  # 15: "building"
+  16: [50, 255, 255]  # 16: "cone/stone"
+  17: [255, 120, 50]  # 17: "fence"
+  18: [0, 0, 0]  # don't care
+  19: [0, 0, 0]  # don't care
+  20: [0, 0, 0]  # don't care
+  21: [100, 230, 245]  # 21: "bike"
+  22: [128, 128, 128] # 22: "road"
+
+color_map_inv: # bgr
+  0: [0, 0, 0]  # 0: "unlabeled"
+  1: [255, 30, 30]  # 4: "1 people"
+  2: [255, 40, 200]  # 6: "rider"
+  3: [100, 150, 245]  # 7: "car"
+  4: [135, 60, 0]  # 8: "trunk"
+  5: [0, 175, 0]  # 9: "plants"
+  6: [255, 0, 0]  # 10: "traffic sign 1"
+  7: [255, 240, 150]  # 13: "pole"
+  8: [125, 255, 0]  # 14: "trashcan"
+  9: [255, 200, 0]  # 15: "building"
+  10: [50, 255, 255]  # 16: "cone/stone"
+  11: [255, 120, 50]  # 17: "fence"
+  12: [100, 230, 245]  # 21: "bike"
+  13: [128, 128, 128] # 22: "road"
+
+learning_map:
+  0: 0 #"unlabeled"
+  4: 1 #"1 people"
+  5: 1 #"2+ people"
+  6: 2 #"rider"
+  7: 3 #"car"
+  8: 4 #"trunk"
+  9: 5 #"plants"
+  10: 6 #"traffic sign 1"  # standing sign
+  11: 6 #"traffic sign 2" # hanging sign
+  12: 6 #"traffic sign 3" # high/big hanging sign
+  13: 7 #"pole"
+  14: 8 #"trashcan" other objects
+  15: 9 #"building"
+  16: 10 #"cone/stone" other objects
+  17: 11 #"fence"
+  21: 12 #"bike"
+  22: 13 #"road" # class definition
+
+mapped_class_name:
+  0: "unlabeled"
+  1: "people"
+  2: "rider"
+  3: "car"
+  4: "trunk"
+  5: "plants"
+  6: "traffic-sign"
+  7: "pole"
+  8: "trashcan"
+  9: "building"
+  10: "cone/stone"
+  11: "fence"
+  12: "bike"
+  13: "road"
+
+learning_map_inv: # inverse of previous map
+  0: 0 # "unlabeled", and others ignored
+  1: 4 #"1 people"#"2+ people"
+  2: 6 #"rider"
+  3: 7 #"car"
+  4: 8 # "trunk"
+  5: 9 #"plants"
+  6: 10 #"traffic sign 1"  # standing sign #"traffic sign 2" # hanging sign #"traffic sign 3" # high/big hanging sign
+  7: 13 #"pole"
+  8: 14 #"trashcan" other objects #"cone/stone" other objects
+  9: 15 #"building"
+  10: 16 #"cone/stone" other objects
+  11: 17 #"fence"
+  12: 21 #"bike"
+  13: 22 #"road"
+
+learning_ignore:
+  0: True # "unlabeled", and others ignored
+  1: False
+  2: False
+  3: False
+  4: False
+  5: False
+  6: False
+  7: False
+  8: False
+  9: False
+  10: False
+  11: False
+  12: False
+  13: False
+
+split: # sequence numbers
+  train:
+    - 0
+    - 1
+    - 2
+    - 4
+    - 5
+  val:
+    - 3

@@ -1,0 +1,178 @@
+name: "nuscenes"
+labels:
+  0: "noise"
+  1: "animal"
+  2: "human,pedestrian,adult"
+  3: "human,pedestrian,child"
+  4: "human,pedestrian,construction_worker"
+  5: "human,pedestrian,personal_mobility"
+  6: "human,pedestrian,police_officer"
+  7: "human,pedestrian,stroller"
+  8: "human,pedestrian,wheelchair"
+  9: "movable_object,barrier"
+  10: "movable_object,debris"
+  11: "movable_object,pushable_pullable"
+  12: "movable_object,trafficcone"
+  13: "static_object,bicycle_rack"
+  14: "vehicle,bicycle"
+  15: "vehicle,bus,bendy"
+  16: "vehicle,bus,rigid"
+  17: "vehicle,car"
+  18: "vehicle,construction"
+  19: "vehicle,emergency,ambulance"
+  20: "vehicle,emergency,police"
+  21: "vehicle,motorcycle"
+  22: "vehicle,trailer"
+  23: "vehicle,truck"
+  24: "flat,driveable_surface"
+  25: "flat,other"
+  26: "flat,sidewalk"
+  27: "flat,terrain"
+  28: "static,manmade"
+  29: "static,other"
+  30: "static,vegetation"
+  31: "vehicle,ego"
+
+color_map:
+  0: [0, 0, 0,]
+  1: [ 70, 130, 180,]
+  2: [  0,   0, 230,]
+  3: [135, 206, 235,]
+  4: [100, 149, 237,]
+  5: [219, 112, 147,]
+  6: [  0,   0, 128,]
+  7: [240, 128, 128,]
+  8: [138,  43, 226,]
+  9: [112, 128, 144,]
+  10: [210, 105,  30,]
+  11: [105, 105, 105,]
+  12: [47, 79, 79,]
+  13: [188, 143, 143,]
+  14: [220,  20,  60,]
+  15: [255, 127,  80,]
+  16: [255,  69,   0,]
+  17: [255, 158,   0,]
+  18: [233, 150,  70,]
+  19: [255,  83,   0,]
+  20: [255, 215,   0,]
+  21: [255,  61,  99,]
+  22: [255, 140,   0,]
+  23: [255,  99,  71,]
+  24: [  0, 207, 191,]
+  25: [175,   0,  75,]
+  26: [75,  0, 75,]
+  27: [112, 180,  60,]
+  28: [222, 184, 135,]
+  29: [255, 228, 196,]
+  30: [  0, 175,   0,]
+  31: [255, 240, 245,]
+
+color_map_inv:
+  0: [255, 240, 245,]
+  1: [112, 128, 144,]
+  2: [220,  20,  60,]
+  3: [255,  69,   0,]
+  4: [255, 158,   0,]
+  5: [233, 150,  70,]
+  6: [255,  61,  99,]
+  7: [  0,   0, 128,]
+  8: [47, 79, 79,]
+  9: [255, 140,   0,]
+  10: [255,  99,  71,]
+  11: [  0, 207, 191,]
+  12: [175,   0,  75,]
+  13: [75,  0, 75,]
+  14: [112, 180,  60,]
+  15: [222, 184, 135,]
+  16: [  0, 175,   0,]
+
+learning_map:
+  0: 0
+  1: 0
+  2: 7
+  3: 7
+  4: 7
+  5: 0
+  6: 7
+  7: 0
+  8: 0
+  9: 1
+  10: 0
+  11: 0
+  12: 8
+  13: 0
+  14: 2
+  15: 3
+  16: 3
+  17: 4
+  18: 5
+  19: 0
+  20: 0
+  21: 6
+  22: 9
+  23: 10
+  24: 11
+  25: 12
+  26: 13
+  27: 14
+  28: 15
+  29: 0
+  30: 16
+  31: 0
+
+mapped_class_name:
+  0: "ignore"
+  1: "barrier"
+  2: "bicycle"
+  3: "bus"
+  4: "car"
+  5: "construction_vehicle"
+  6: "motorcycle"
+  7: "pedestrian"
+  8: "traffic_cone"
+  9: "trailer"
+  10: "truck"
+  11: "driveable_surface"
+  12: "other_flat"
+  13: "sidewalk"
+  14: "terrain"
+  15: "manmade"
+  16: "vegetation"
+
+learning_map_inv:
+  0: 0 # "ignore"
+  1: 9 # "barrier"
+  2: 14 # "bicycle"
+  3: 16 # "bus"
+  4: 17 # "car"
+  5: 18 # "construction_vehicle"
+  6: 21 # "motorcycle"
+  7: 7 # "pedestrian"
+  8: 12 # "traffic_cone"
+  9: 22 # "trailer"
+  10: 23 # "truck"
+  11: 24 # "driveable_surface"
+  12: 25 # "other_flat"
+  13: 26 # "sidewalk"
+  14: 27 # "terrain"
+  15: 28 # "manmade"
+  16: 30 # "vegetation"
+
+learning_ignore:
+  0: True # "unlabeled" and others ignored
+  1: False
+  2: False
+  3: False
+  4: False
+  5: False
+  6: False
+  7: False
+  8: False
+  9: False
+  10: False
+  11: False
+  12: False
+  13: False
+  14: False
+  15: False
+  16: False

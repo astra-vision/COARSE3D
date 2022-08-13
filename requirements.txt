@@ -1,0 +1,6 @@
+open3d==0.15.2
+nuscenes-devkit==1.1.9
+einops==0.4.1
+timm==0.5.4
+plyfile
+tensorboardX
