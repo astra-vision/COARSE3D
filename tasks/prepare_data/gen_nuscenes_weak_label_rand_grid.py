@@ -165,7 +165,7 @@ class NuscenesData():
         # /mnt/cephfs/dataset/pointclouds/nuscenes/lidarseg/v1.0-mini/fdddd75ee1d94f14a09991988dab8b3e_lidarseg.bin
 
         new_weak_label_file = label_file.replace(self.args.dataset_root, self.args.dataset_save). \
-            replace('lidarseg', self.args.dir_save).replace('.bin', '.npy')
+            replace('lidarseg', self.args.weak_label_name).replace('.bin', '.npy')
         # e.g.
         # /mnt/cephfs/dataset/pointclouds/nuscenes-coarse3d//xxx/v1.0-mini/fdddd75ee1d94f14a09991988dab8b3e_xxx.npy
 

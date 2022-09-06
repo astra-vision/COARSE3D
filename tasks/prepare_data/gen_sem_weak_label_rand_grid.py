@@ -77,7 +77,7 @@ class SemanticData():
             assert os.path.exists(label_path)
 
             # create save path for generated weak label
-            os.makedirs(os.path.join(self.args.dataset_save, seq, self.args.dir_save), exist_ok=True)
+            os.makedirs(os.path.join(self.args.dataset_save, seq, self.args.weak_label_name), exist_ok=True)
 
             # get files
             scan_files = [os.path.join(dp, f) for dp, dn, fn in os.walk(
@@ -156,7 +156,7 @@ class SemanticData():
         mapped_label = (self.label_map[label])  # [0 - 19] in semantic kitti, or [0 - 13] in semantic poss
 
         new_weak_label_file = label_file.replace(self.args.dataset_root, self.args.dataset_save). \
-            replace('labels', self.args.dir_save).replace('.label', '.npy')
+            replace('labels', self.args.weak_label_name).replace('.label', '.npy')
 
         # grid sampling
         xyz = o3d.geometry.PointCloud()
