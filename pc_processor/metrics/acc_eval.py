@@ -2,13 +2,14 @@
 
 # This file is covered by the LICENSE file in the root of this project.
 
-import torch 
+import torch
+
 
 class AccEval(object):
-    def __init__(self, topk=(1, ), is_distributed=False):
-        self.topk = topk 
+    def __init__(self, topk=(1,), is_distributed=False):
+        self.topk = topk
         self.is_distributed = is_distributed
-    
+
     def getAcc(self, output, target):
         maxk = max(self.topk)
         batch_size = target.size(0)
@@ -26,6 +27,6 @@ class AccEval(object):
             batch_size = batch_size.item()
         for k in self.topk:
             correct_k = correct[:k].float().sum()
-            acc = correct_k.mul_(100.0/batch_size)
+            acc = correct_k.mul_(100.0 / batch_size)
             res.append(acc)
         return res

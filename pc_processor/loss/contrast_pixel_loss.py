@@ -6,13 +6,14 @@ torch.random.manual_seed(0)
 
 
 class ContrastMEMLoss(nn.Module):
-    def __init__(self,
-                 ignore_label=0,
-                 temperature=0.1,
-                 base_temperature=0.07,
-                 num_anchor=50,
-                 is_debug=False,
-                 ):
+    def __init__(
+        self,
+        ignore_label=0,
+        temperature=0.1,
+        base_temperature=0.07,
+        num_anchor=50,
+        is_debug=False,
+    ):
         super(ContrastMEMLoss, self).__init__()
 
         self.temperature = temperature
@@ -23,13 +24,14 @@ class ContrastMEMLoss(nn.Module):
         self.is_debug = is_debug
         self.sub_proto = True
 
-    def forward(self,
-                feats=None,
-                output=None,
-                labels=None,
-                keep_mask=None,
-                proto_queue=None,
-                ):
+    def forward(
+        self,
+        feats=None,
+        output=None,
+        labels=None,
+        keep_mask=None,
+        proto_queue=None,
+    ):
 
         labels = labels.clone()
         if keep_mask is not None:
@@ -39,7 +41,7 @@ class ContrastMEMLoss(nn.Module):
         proto_queue = proto_queue.squeeze(0)
 
         if self.is_debug:
-            print('queue size, max views : ', proto_queue.shape)
+            print("queue size, max views : ", proto_queue.shape)
 
         if output is not None:
             entropy = -torch.sum(output * torch.log(output + 1e-10), dim=1)  # b, h, w
@@ -49,7 +51,9 @@ class ContrastMEMLoss(nn.Module):
             entropy = None
             entropy_weights = None
 
-        assert labels.shape[-1] == feats.shape[-1], '{} {}'.format(labels.shape, feats.shape)
+        assert labels.shape[-1] == feats.shape[-1], "{} {}".format(
+            labels.shape, feats.shape
+        )
 
         batch_size, dim, h, w = feats.shape
         feats = feats.permute(0, 2, 3, 1)
@@ -63,7 +67,7 @@ class ContrastMEMLoss(nn.Module):
 
         # entropy based anchor sampling
         feats_, labels_ = self.anchor_sampling(feats, labels, weights=entropy_weights)
-        assert len(feats) > 0, 'no anchor feature is selected for loss'
+        assert len(feats) > 0, "no anchor feature is selected for loss"
 
         # compute loss based on prototype queue
         loss = self._contrastive(feats_, labels_, queue=proto_queue)
@@ -87,7 +91,9 @@ class ContrastMEMLoss(nn.Module):
         if total_classes == 0:
             return None, None
 
-        X_ = torch.zeros((total_classes, self.num_anchor, feat_dim), dtype=torch.float).cuda()
+        X_ = torch.zeros(
+            (total_classes, self.num_anchor, feat_dim), dtype=torch.float
+        ).cuda()
         y_ = torch.zeros(total_classes, dtype=torch.float).cuda()
 
         X_ptr = 0
@@ -105,9 +111,13 @@ class ContrastMEMLoss(nn.Module):
                 assert weights is not None
                 weight_c = weights[ii].clone()
                 weight_c[this_y_hat != cls_id] = 0
-                keep_indices = torch.multinomial(weight_c.reshape(-1), self.num_anchor, replacement=True)
+                keep_indices = torch.multinomial(
+                    weight_c.reshape(-1), self.num_anchor, replacement=True
+                )
 
-                X_[X_ptr, :keep_indices.shape[0], :] = X[ii, keep_indices, :].squeeze(1)
+                X_[X_ptr, : keep_indices.shape[0], :] = X[ii, keep_indices, :].squeeze(
+                    1
+                )
 
                 y_[X_ptr] = cls_id
                 X_ptr = X_ptr + 1
@@ -132,8 +142,8 @@ class ContrastMEMLoss(nn.Module):
             perm = torch.randperm(int(cache_size))
             this_q = queue[ii, perm[:cache_size], :]
 
-            X_[sample_ptr:sample_ptr + cache_size, ...] = this_q
-            y_[sample_ptr:sample_ptr + cache_size, ...] = ii
+            X_[sample_ptr : sample_ptr + cache_size, ...] = this_q
+            y_[sample_ptr : sample_ptr + cache_size, ...] = ii
             sample_ptr += cache_size
 
         return X_, y_
@@ -155,8 +165,9 @@ class ContrastMEMLoss(nn.Module):
         # cosine similarity
         anchor_feature = F.normalize(anchor_feature, p=2, dim=-1)  # (n, dim)
         contrast_feature = F.normalize(contrast_feature, p=2, dim=-1)
-        anchor_dot_contrast = torch.einsum('nd,kd->nk', anchor_feature,
-                                           contrast_feature)  # (n, dim) (cls, dim) => (n, cls)
+        anchor_dot_contrast = torch.einsum(
+            "nd,kd->nk", anchor_feature, contrast_feature
+        )  # (n, dim) (cls, dim) => (n, cls)
 
         anchor_dot_contrast = torch.div(anchor_dot_contrast, self.temperature)
 
@@ -178,7 +189,7 @@ class ContrastMEMLoss(nn.Module):
 
         # keep positive logits, divide positives number
         mean_log_prob_pos = (mask * log_prob).sum(1) / mask.sum(1)
-        loss = - (self.temperature / self.base_temperature) * mean_log_prob_pos
+        loss = -(self.temperature / self.base_temperature) * mean_log_prob_pos
         loss = loss.mean()
 
         return loss

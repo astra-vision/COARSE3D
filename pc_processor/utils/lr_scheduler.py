@@ -10,14 +10,14 @@ class WarmupMultiStepLR(_LRScheduler):
     """https://github.com/facebookresearch/maskrcnn-benchmark/blob/master/maskrcnn_benchmark/solver/lr_scheduler.py"""
 
     def __init__(
-            self,
-            optimizer,
-            milestones,
-            gamma=0.1,
-            warmup_factor=0.1,
-            warmup_steps=1,
-            warmup_method="linear",
-            last_epoch=-1,
+        self,
+        optimizer,
+        milestones,
+        gamma=0.1,
+        warmup_factor=0.1,
+        warmup_steps=1,
+        warmup_method="linear",
+        last_epoch=-1,
     ):
         if not list(milestones) == sorted(milestones):
             raise ValueError(
@@ -79,7 +79,6 @@ class ClipLR(object):
 
 
 class PolyOptimizer(torch.optim.SGD):
-
     def __init__(self, params, lr, weight_decay, max_step, momentum=0.9):
         super().__init__(params, lr, weight_decay)
 
@@ -87,7 +86,7 @@ class PolyOptimizer(torch.optim.SGD):
         self.max_step = max_step
         self.momentum = momentum
 
-        self.__initial_lr = [group['lr'] for group in self.param_groups]
+        self.__initial_lr = [group["lr"] for group in self.param_groups]
 
     def step(self, closure=None):
 
@@ -95,7 +94,7 @@ class PolyOptimizer(torch.optim.SGD):
             lr_mult = (1 - self.global_step / self.max_step) ** self.momentum
 
             for i in range(len(self.param_groups)):
-                self.param_groups[i]['lr'] = self.__initial_lr[i] * lr_mult
+                self.param_groups[i]["lr"] = self.__initial_lr[i] * lr_mult
 
         super().step(closure)
 

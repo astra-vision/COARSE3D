@@ -5,16 +5,17 @@ import yaml
 
 
 class SemanticPOSS(object):
-    def __init__(self,
-                 root,  # directory where data is #  [pcd_root, weak_root]
-                 sequences,  # sequences for this data (e.g. [1,3,4,6])
-                 config_path,  # directory of config file
-                 has_weak_label=False,
-                 weak_label_name='',
-                 has_label=True,
-                 range_h=40,  # height of range image
-                 range_w=1800,  # width of range image
-                 ):
+    def __init__(
+        self,
+        root,  # directory where data is #  [pcd_root, weak_root]
+        sequences,  # sequences for this data (e.g. [1,3,4,6])
+        config_path,  # directory of config file
+        has_weak_label=False,
+        weak_label_name="",
+        has_label=True,
+        range_h=40,  # height of range image
+        range_w=1800,  # width of range image
+    ):
         self.root = root  #
         self.sequences = sequences
         self.sequences.sort()  # sort seq id
@@ -35,10 +36,14 @@ class SemanticPOSS(object):
             else:
                 raise ValueError("Dataset not found: {}".format(i))
 
-        assert os.path.exists(self.root[0]), ValueError("Dataset not found: {}".format(self.root[0]))
+        assert os.path.exists(self.root[0]), ValueError(
+            "Dataset not found: {}".format(self.root[0])
+        )
 
         if self.has_weak_label:
-            assert os.path.exists(self.root[1]), ValueError("Dataset not found: {}".format(self.root[1]))
+            assert os.path.exists(self.root[1]), ValueError(
+                "Dataset not found: {}".format(self.root[1])
+            )
 
         self.pointcloud_files = []
         self.tag_files = []
@@ -53,34 +58,44 @@ class SemanticPOSS(object):
 
             # get file list from path
             pointcloud_path = os.path.join(self.root[0], seq, "velodyne")
-            pointcloud_files = [os.path.join(pointcloud_path, f) for f in os.listdir(
-                pointcloud_path) if ".bin" or '.npy' in f]
+            pointcloud_files = [
+                os.path.join(pointcloud_path, f)
+                for f in os.listdir(pointcloud_path)
+                if ".bin" or ".npy" in f
+            ]
             self.pointcloud_files.extend(pointcloud_files)
 
             #  File XXXXXX.tag in the tag folder is used for generating range image,
             #  which records the position of each point in range image.
             tag_path = os.path.join(self.root[0], seq, "tag")
-            tag_files = [os.path.join(tag_path, f) for f in os.listdir(
-                tag_path) if ".tag" in f]
+            tag_files = [
+                os.path.join(tag_path, f) for f in os.listdir(tag_path) if ".tag" in f
+            ]
             self.tag_files.extend(tag_files)
             assert len(pointcloud_files) == len(tag_files)
 
             if self.has_label:
                 label_path = os.path.join(self.root[0], seq, "labels")
-                label_files = [os.path.join(label_path, f)
-                               for f in os.listdir(label_path) if ".label" in f]
-                assert (len(pointcloud_files) == len(label_files))
+                label_files = [
+                    os.path.join(label_path, f)
+                    for f in os.listdir(label_path)
+                    if ".label" in f
+                ]
+                assert len(pointcloud_files) == len(label_files)
                 self.label_files.extend(label_files)
 
             if self.has_weak_label:
                 label_path = os.path.join(self.root[1], seq, self.weak_label_name)
-                weak_label_files = [os.path.join(label_path, f)
-                                    for f in os.listdir(label_path) if ".label" or '.npy' in f]
+                weak_label_files = [
+                    os.path.join(label_path, f)
+                    for f in os.listdir(label_path)
+                    if ".label" or ".npy" in f
+                ]
                 self.weak_label_files.extend(weak_label_files)
-                assert (len(pointcloud_files) == len(weak_label_files))
+                assert len(pointcloud_files) == len(weak_label_files)
 
         # sort for correspondance
-        assert len(self.pointcloud_files) > 0, 'no point cloud file is found !!!'
+        assert len(self.pointcloud_files) > 0, "no point cloud file is found !!!"
 
         self.pointcloud_files.sort()
         self.tag_files.sort()
@@ -89,8 +104,11 @@ class SemanticPOSS(object):
             self.label_files.sort()
         if self.has_weak_label:
             self.weak_label_files.sort()
-        print("Using {} pointclouds from sequences {}".format(
-            len(self.pointcloud_files), self.sequences))
+        print(
+            "Using {} pointclouds from sequences {}".format(
+                len(self.pointcloud_files), self.sequences
+            )
+        )
 
         # load config
         # get color map
@@ -116,8 +134,7 @@ class SemanticPOSS(object):
         for k, v in sem_color_inv_map.items():
             self.sem_color_lut_inv[k] = np.array(v, np.float32) / 255.0
 
-        self.inst_color_map = np.random.uniform(
-            low=0.0, high=1.0, size=(10000, 3))
+        self.inst_color_map = np.random.uniform(low=0.0, high=1.0, size=(10000, 3))
 
         # get learning class map
         # map unused classes to used classes
@@ -160,9 +177,12 @@ class SemanticPOSS(object):
         proj_range = np.reshape(proj_range, (self.proj_h, self.proj_w))
 
         proj_pointcloud = np.full(
-            (self.proj_h * self.proj_w, pointcloud.shape[1]), -1, dtype=np.float32)
+            (self.proj_h * self.proj_w, pointcloud.shape[1]), -1, dtype=np.float32
+        )
         proj_pointcloud[tags] = pointcloud
-        proj_pointcloud = np.reshape(proj_pointcloud, (self.proj_h, self.proj_w, pointcloud.shape[1]))
+        proj_pointcloud = np.reshape(
+            proj_pointcloud, (self.proj_h, self.proj_w, pointcloud.shape[1])
+        )
 
         proj_full_label = np.full((self.proj_h * self.proj_w), 0, dtype=np.int32)
         proj_full_label[tags] = full_label
@@ -175,11 +195,19 @@ class SemanticPOSS(object):
         proj_mask = (proj_range > -1).astype(np.bool)
         assert len(pointcloud) == proj_mask.sum()
 
-        return proj_pointcloud, proj_range, proj_mask, proj_weak_label, proj_full_label, tags, depth
+        return (
+            proj_pointcloud,
+            proj_range,
+            proj_mask,
+            proj_weak_label,
+            proj_full_label,
+            tags,
+            depth,
+        )
 
     @staticmethod
     def readPCD(path):
-        if '.npy' in path:
+        if ".npy" in path:
             pcd = np.load(path)
         else:
             pcd = np.fromfile(path, dtype=np.float32).reshape(-1, 4)
@@ -187,7 +215,7 @@ class SemanticPOSS(object):
 
     @staticmethod
     def readLabel(path):
-        if '.npy' in path:
+        if ".npy" in path:
             sem_label = np.load(path)
             inst_label = []
         else:

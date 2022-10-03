@@ -1,17 +1,18 @@
 from .avgmeter import RunningAvgMeter
 
+
 class RemainTime(object):
     def __init__(self, n_epochs):
         self.n_epochs = n_epochs
         self.timer_avg = {}
         self.total_iter = {}
-    
+
     def update(self, cost_time, batch_size=1, mode="Train"):
         if mode not in self.timer_avg.keys():
             self.timer_avg[mode] = RunningAvgMeter()
             self.total_iter[mode] = 0
         self.timer_avg[mode].update(cost_time)
-    
+
     def reset(self):
         self.timer_avg = {}
 

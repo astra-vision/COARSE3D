@@ -1,4 +1,3 @@
-
 class ClassifierAverageMeter:
     def __init__(self, *keys):
         self.__data = dict()
@@ -27,4 +26,3 @@ class ClassifierAverageMeter:
             v = self.get(key)
             self.__data[key] = [0.0, 0]
             return v
-

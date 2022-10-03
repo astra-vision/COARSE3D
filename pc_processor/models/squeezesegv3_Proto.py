@@ -10,6 +10,9 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 from timm.models.layers import trunc_normal_
 
+import sys
+
+sys.path.insert(0, "../../")
 from pc_processor.models.projector import ProjectionV1
 from pc_processor.models.sinkhorn import distributed_sinkhorn
 
@@ -17,9 +20,15 @@ from pc_processor.models.sinkhorn import distributed_sinkhorn
 def momentum_update(old_value, new_value, momentum, debug=False):
     update = momentum * old_value + (1 - momentum) * new_value
     if debug:
-        print("# old prot: {:.3f} x |{:.3f}|, new val: {:.3f} x |{:.3f}|, result= |{:.3f}|".format(
-            momentum, torch.norm(old_value, p=2), (1 - momentum), torch.norm(new_value, p=2),
-            torch.norm(update, p=2)))
+        print(
+            "# old prot: {:.3f} x |{:.3f}|, new val: {:.3f} x |{:.3f}|, result= |{:.3f}|".format(
+                momentum,
+                torch.norm(old_value, p=2),
+                (1 - momentum),
+                torch.norm(new_value, p=2),
+                torch.norm(update, p=2),
+            )
+        )
     return update
 
 
@@ -28,24 +37,25 @@ def l2_normalize(x):
 
 
 class SqueezeSegV3Proto(nn.Module):
-    def __init__(self,
-                 nclasses,
-                 dataset='SemanticKitti',
-                 path=None,
-                 path_append="",
-                 strict=False,
-                 layers=21,
-                 # added params
-                 proj_dim=256,
-                 projection='v1',
-                 proj_feat='mix',
-                 l2_norm=True,
-                 proto_mom=0.999,
-                 ignore_label=0,
-                 sub_proto_size=20,
-                 use_prototype=False,
-                 pred_3d=False,
-                 ):
+    def __init__(
+        self,
+        nclasses,
+        dataset="SemanticKitti",
+        path=None,
+        path_append="",
+        strict=False,
+        layers=21,
+        # added params
+        proj_dim=256,
+        projection="v1",
+        proj_feat="mix",
+        l2_norm=True,
+        proto_mom=0.999,
+        ignore_label=0,
+        sub_proto_size=20,
+        use_prototype=False,
+        pred_3d=False,
+    ):
         super().__init__()
         self.nclasses = nclasses
         self.path = path
@@ -64,32 +74,31 @@ class SqueezeSegV3Proto(nn.Module):
 
         self.backbone = Backbone(layers=layers)
 
-        self.decoder = Decoder(OS=8,
-                               feature_depth=self.backbone.get_last_depth())
+        self.decoder = Decoder(OS=8, feature_depth=self.backbone.get_last_depth())
 
-        self.head1 = nn.Sequential(nn.Dropout2d(p=0.01),
-                                   nn.Conv2d(256,
-                                             self.nclasses, kernel_size=1,
-                                             stride=1, padding=0))
+        self.head1 = nn.Sequential(
+            nn.Dropout2d(p=0.01),
+            nn.Conv2d(256, self.nclasses, kernel_size=1, stride=1, padding=0),
+        )
 
-        self.head2 = nn.Sequential(nn.Dropout2d(p=0.01),
-                                   nn.Conv2d(256,
-                                             self.nclasses, kernel_size=1,
-                                             stride=1, padding=0))
+        self.head2 = nn.Sequential(
+            nn.Dropout2d(p=0.01),
+            nn.Conv2d(256, self.nclasses, kernel_size=1, stride=1, padding=0),
+        )
 
-        self.head3 = nn.Sequential(nn.Dropout2d(p=0.01),
-                                   nn.Conv2d(128,
-                                             self.nclasses, kernel_size=1,
-                                             stride=1, padding=0))
+        self.head3 = nn.Sequential(
+            nn.Dropout2d(p=0.01),
+            nn.Conv2d(128, self.nclasses, kernel_size=1, stride=1, padding=0),
+        )
 
-        self.head4 = nn.Sequential(nn.Dropout2d(p=0.01),
-                                   nn.Conv2d(64,
-                                             self.nclasses, kernel_size=1,
-                                             stride=1, padding=0))
-        self.head5 = nn.Sequential(nn.Dropout2d(p=0.01),
-                                   nn.Conv2d(32,
-                                             self.nclasses, kernel_size=3,
-                                             stride=1, padding=1))
+        self.head4 = nn.Sequential(
+            nn.Dropout2d(p=0.01),
+            nn.Conv2d(64, self.nclasses, kernel_size=1, stride=1, padding=0),
+        )
+        self.head5 = nn.Sequential(
+            nn.Dropout2d(p=0.01),
+            nn.Conv2d(32, self.nclasses, kernel_size=3, stride=1, padding=1),
+        )
 
         # print number of parameters and the ones requiring gradients
         weights_total = sum(p.numel() for p in self.parameters())
@@ -100,113 +109,140 @@ class SqueezeSegV3Proto(nn.Module):
         # breakdown by layer
         weights_enc = sum(p.numel() for p in self.backbone.parameters())
         weights_dec = sum(p.numel() for p in self.decoder.parameters())
-        weights_head = sum(p.numel() for p in self.head1.parameters()) + \
-                       sum(p.numel() for p in self.head2.parameters()) + \
-                       sum(p.numel() for p in self.head3.parameters()) + \
-                       sum(p.numel() for p in self.head4.parameters()) + \
-                       sum(p.numel() for p in self.head5.parameters())
+        weights_head = (
+            sum(p.numel() for p in self.head1.parameters())
+            + sum(p.numel() for p in self.head2.parameters())
+            + sum(p.numel() for p in self.head3.parameters())
+            + sum(p.numel() for p in self.head4.parameters())
+            + sum(p.numel() for p in self.head5.parameters())
+        )
         print("Param encoder ", weights_enc)
         print("Param decoder ", weights_dec)
         print("Param head ", weights_head)
-        # if self.CRF:
-        #     weights_crf = sum(p.numel() for p in self.CRF.parameters())
-        #     print("Param CRF ", weights_crf)
 
         # get weights
         if path is not None:
             # try backbone
             try:
-                w_dict = torch.load(path + "/backbone",
-                                    map_location=lambda storage, loc: storage)
+                w_dict = torch.load(
+                    path + "/backbone", map_location=lambda storage, loc: storage
+                )
                 self.backbone.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model backbone weights")
             except Exception as e:
                 print()
                 print("Couldn't load backbone, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
 
             # try decoder
             try:
-                w_dict = torch.load(path + "/segmentation_decoder",
-                                    map_location=lambda storage, loc: storage)
+                w_dict = torch.load(
+                    path + "/segmentation_decoder",
+                    map_location=lambda storage, loc: storage,
+                )
                 self.decoder.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model decoder weights")
             except Exception as e:
                 print("Couldn't load decoder, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
 
             # try head
             try:
-                print(path_append + './segmentation_head1')
-                w_dict = torch.load(path + "/segmentation_head1",
-                                    map_location=lambda storage, loc: storage)
+                print(path_append + "./segmentation_head1")
+                w_dict = torch.load(
+                    path + "/segmentation_head1",
+                    map_location=lambda storage, loc: storage,
+                )
                 self.head1.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model head weights")
             except Exception as e:
                 print("Couldn't load head, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
             try:
-                w_dict = torch.load(path + "/segmentation_head2",
-                                    map_location=lambda storage, loc: storage)
+                w_dict = torch.load(
+                    path + "/segmentation_head2",
+                    map_location=lambda storage, loc: storage,
+                )
                 self.head2.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model head weights")
             except Exception as e:
                 print("Couldn't load head, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
             try:
-                w_dict = torch.load(path + "/segmentation_head3",
-                                    map_location=lambda storage, loc: storage)
+                w_dict = torch.load(
+                    path + "/segmentation_head3",
+                    map_location=lambda storage, loc: storage,
+                )
                 self.head3.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model head weights")
             except Exception as e:
                 print("Couldn't load head, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
 
             try:
-                w_dict = torch.load(path + "/segmentation_head4",
-                                    map_location=lambda storage, loc: storage)
+                w_dict = torch.load(
+                    path + "/segmentation_head4",
+                    map_location=lambda storage, loc: storage,
+                )
                 self.head4.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model head weights")
             except Exception as e:
                 print("Couldn't load head, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
 
             try:
-                w_dict = torch.load(path + "/segmentation_head5",
-                                    map_location=lambda storage, loc: storage)
+                w_dict = torch.load(
+                    path + "/segmentation_head5",
+                    map_location=lambda storage, loc: storage,
+                )
                 self.head5.load_state_dict(w_dict, strict=True)
                 print("Successfully loaded model head weights")
             except Exception as e:
                 print("Couldn't load head, using random weights. Error: ", e)
                 if strict:
-                    print("I'm in strict mode and failure to load weights blows me up :)")
+                    print(
+                        "I'm in strict mode and failure to load weights blows me up :)"
+                    )
                     raise e
         else:
             print("No path to pretrained, using random init.")
 
         # contrast define
-        if self.projection == 'v1':
+        if self.projection == "v1":
             self.projector = ProjectionV1(480, proj_dim)  # mix
         else:
             raise NotImplementedError
 
         # memory bank
-        self.prototypes = nn.Parameter(torch.randn(nclasses, sub_proto_size, proj_dim),
-                                       # requires_grad=True,
-                                       requires_grad=False
-                                       )
+        self.prototypes = nn.Parameter(
+            torch.randn(nclasses, sub_proto_size, proj_dim),
+            # requires_grad=True,
+            requires_grad=False,
+        )
         trunc_normal_(self.prototypes, std=0.02)
 
         self.feat_norm = nn.LayerNorm(proj_dim)
@@ -214,24 +250,33 @@ class SqueezeSegV3Proto(nn.Module):
 
         return
 
-    def prototype_learning(self, out_feat, nearest_proto_distance, label, eval_mask, feat_proto_sim,
-                           cosine=False, cosine_abs=True, euclidean=False, l1_dist=False, kl_dist=False,
-                           weighted_sum=False,
-                           ):
-        '''
-        :param out_feat: [32768, 720]  # [h*w, dim] 每个pixel的feature
-        :param nearest_proto_distance: [1, 19, 128, 256] [bs, cls_num, h, w] # [-4, 4]
-        :param label: [32768] # [h*w] segmentation label
-        :param feat_proto_sim: [32768, 10, 19]  # [h*w, sub_cluster, cls_num]
-        :return:
-             proto_logits: [32768, 190]  # [h*w, sub_cluster * cls_num] # [-1, 1] 每个pixel对190个cluster的distance
-             proto_target: [32768] # [h*w] 每个pixel属于的sub_cluster [0, 1, ..., 9] # cluster label
-        '''
-        pred_seg = torch.max(nearest_proto_distance, 1)[1]  # [1, 128, 256] the idx of the nearest
-        mask = (label == pred_seg.view(-1))  # [32768]
+    def prototype_learning(
+        self,
+        out_feat,
+        nearest_proto_distance,
+        label,
+        eval_mask,
+        feat_proto_sim,
+        cosine=False,
+        cosine_abs=True,
+        euclidean=False,
+        l1_dist=False,
+        kl_dist=False,
+        weighted_sum=False,
+    ):
+        """
+        :param out_feat: [h*w, dim] pixel feature
+        :param nearest_proto_distance: [bs, cls_num, h, w] 
+        :param label: [h*w] segmentation label
+        :param feat_proto_sim: [h*w, sub_cluster, cls_num]
+        """
+        pred_seg = torch.max(nearest_proto_distance, 1)[
+            1
+        ]  # [1, 128, 256] the idx of the nearest
+        mask = label == pred_seg.view(-1)  
         # mask = eval_mask.view(-1)
         # (b*h*w, dim) (cls*k, dim) => (b*h*w, cls*k) # from cls classes to cls*k classes
-        # cosine_similarity = torch.mm(out_feat, self.prototypes.view(-1, self.prototypes.shape[-1]).t())  # [65536, 200]
+        # cosine_similarity = torch.mm(out_feat, self.prototypes.view(-1, self.prototypes.shape[-1]).t())  
         cosine_similarity = feat_proto_sim.reshape(feat_proto_sim.shape[0], -1)
 
         proto_logits = cosine_similarity
@@ -244,7 +289,9 @@ class SqueezeSegV3Proto(nn.Module):
             if id_c == self.ignore_label:
                 continue
 
-            init_q = feat_proto_sim[..., id_c]  # n, k, cls => n, k # 拿出一个class queue # 每个pixel对class k的子类别的预测值
+            init_q = feat_proto_sim[
+                ..., id_c
+            ]  # n, k, cls => n, k 
             init_q = init_q[label == id_c, ...]  #
             if init_q.shape[0] == 0:  # no such class
                 continue
@@ -255,56 +302,65 @@ class SqueezeSegV3Proto(nn.Module):
 
             m_c = mask[label == id_c]  # [n]
 
-            feat_c = out_feat[label == id_c, ...]  # [n, 720]
+            feat_c = out_feat[label == id_c, ...]  # [n, dim]
 
-            m_c_tile = repeat(m_c, 'n -> n tile', tile=self.sub_proto_size)  # [n, 10]
+            m_c_tile = repeat(m_c, "n -> n tile", tile=self.sub_proto_size)  # [n, p]
 
-            m_q = q * m_c_tile  # (n x 10) (n x 10) -> (n x 10) masked one hot label
+            m_q = q * m_c_tile  # (n x p) (n x p) -> (n x p) masked one hot label
 
-            m_c_tile = repeat(m_c, 'n -> n tile', tile=feat_c.shape[-1])  # [n, dim]
+            m_c_tile = repeat(m_c, "n -> n tile", tile=feat_c.shape[-1])  # [n, dim]
 
             c_q = feat_c * m_c_tile  # [n, dim]
 
             if weighted_sum:
-                # v1
-                # weight = 1 - m_q * init_q  # 1 - (n, 10) => (n, 10)
-                # f = weight.transpose(0, 1) @ c_q  # (10, n) (n, dim) => (10, dim)
-                # v2
-                weight = 1 - init_q  # 1 - (n, 10) => (n, 10)
-                f = weight.transpose(0, 1) @ c_q  # (10, n) (n, dim) => (10, dim)
+                weight = 1 - init_q  # 1 - (n, p) => (n, p)
+                f = weight.transpose(0, 1) @ c_q  # (p, n) (n, dim) => (p, dim)
             else:
-                f = m_q.transpose(0, 1) @ c_q  # (10, n) (n, dim) => (10, dim)
+                f = m_q.transpose(0, 1) @ c_q  # (p, n) (n, dim) => (p, dim)
 
-            n = torch.sum(m_q, dim=0)  # (n, 10) => 10
-            # if id_c == 1:
-            #     print('!!! {}'.format(n))
+            n = torch.sum(m_q, dim=0)  # (n, p) => p
 
             if torch.sum(n) > 0:
-                f = F.normalize(f, p=2, dim=-1)  # [10, 720]
+                f = F.normalize(f, p=2, dim=-1)  # [p, 720]
 
-                new_value = momentum_update(old_value=protos[id_c, n != 0, :],
-                                            new_value=f[n != 0, :],
-                                            momentum=self.proto_mom,
-                                            # debug=True if id_c == 1 else False,
-                                            debug=False,
-                                            )  # [10, 720]
-                protos[id_c, n != 0, :] = new_value  # [19, 10, 720]
+                new_value = momentum_update(
+                    old_value=protos[id_c, n != 0, :],
+                    new_value=f[n != 0, :],
+                    momentum=self.proto_mom,
+                    # debug=True if id_c == 1 else False,
+                    debug=False,
+                )  # [p, dim]
+                protos[id_c, n != 0, :] = new_value  # [cls, p, dim]
 
-            proto_target[label == id_c] = indexs.float() + (self.sub_proto_size * id_c)  # (n, ) cls*k classes totally
+            proto_target[label == id_c] = indexs.float() + (
+                self.sub_proto_size * id_c
+            )  # (n, ) cls*k classes totally
 
-        self.prototypes = nn.Parameter(l2_normalize(protos),
-                                       requires_grad=False)
+        self.prototypes = nn.Parameter(l2_normalize(protos), requires_grad=False)
         # syn prototypes on gpus
         if dist.is_available() and dist.is_initialized():
-            protos = self.prototypes.data.clone()  # [19, 10, 720] [class_num, sub_cls, feat_dim]
-            dist.all_reduce(protos.div_(dist.get_world_size()))  # default of all_reduce is sum
+            protos = (
+                self.prototypes.data.clone()
+            )  # [class_num, sub_cls, feat_dim]
+            dist.all_reduce(
+                protos.div_(dist.get_world_size())
+            )  # default of all_reduce is sum
             self.prototypes = nn.Parameter(protos, requires_grad=False)
 
         # if we don't use proto loss, no need to return  proto_logits, proto_target
         return proto_logits, proto_target
 
-    def forward(self, x, label=None, eval_mask=None, return_feat=False, proto_loss=False, proto_pl=None,
-                unproj_data=None):
+    def forward(
+        self,
+        x,
+        label=None,
+        eval_mask=None,
+        return_feat=True,
+        proto_loss=False,
+        proto_pl=None,
+        unproj_data=None,
+    ):
+        
         # b, c, h, w = x.shape
 
         # # pad
@@ -336,7 +392,7 @@ class SqueezeSegV3Proto(nn.Module):
         # z5 = self.head1(y[4])
         # z5 = F.softmax(z5, dim=1)
         return_dict = {}
-        return_dict['pred_2d'] = z1.contiguous()
+        return_dict["pred_2d"] = z1.contiguous()
 
         # -----------------------------------------------------
         # contrast learning
@@ -346,37 +402,49 @@ class SqueezeSegV3Proto(nn.Module):
             _, _, h, w = z1.shape
             h = int(h / 2)
             w = int(w / 2)
-            feat0 = F.interpolate(skips[1], size=(h, w), mode="bilinear", align_corners=True)
-            feat1 = F.interpolate(skips[2], size=(h, w), mode="bilinear", align_corners=True)
-            feat2 = F.interpolate(skips[4], size=(h, w), mode="bilinear", align_corners=True)
-            feat3 = F.interpolate(feature, size=(h, w), mode="bilinear", align_corners=True)
+            feat0 = F.interpolate(
+                skips[1], size=(h, w), mode="bilinear", align_corners=True
+            )
+            feat1 = F.interpolate(
+                skips[2], size=(h, w), mode="bilinear", align_corners=True
+            )
+            feat2 = F.interpolate(
+                skips[4], size=(h, w), mode="bilinear", align_corners=True
+            )
+            feat3 = F.interpolate(
+                feature, size=(h, w), mode="bilinear", align_corners=True
+            )
             feat = torch.cat([feat0, feat1, feat2, feat3], 1)  # 480
             embedding = self.projector(feat)
 
             embedding = F.normalize(embedding, p=2, dim=1)  # b, dim, h, w
             _, _, h_lbl, w_lbl = z1.shape
-            embedding = F.interpolate(embedding, (h_lbl, w_lbl), mode="bilinear", align_corners=True)
-            return_dict['feat_2d'] = embedding  # b, dim, h, w
+            embedding = F.interpolate(
+                embedding, (h_lbl, w_lbl), mode="bilinear", align_corners=True
+            )
+            return_dict["feat_2d"] = embedding  # b, dim, h, w
         else:
             embedding = None
 
         if self.use_prototype and label is not None and eval_mask is not None:
             # prototype learning
             b, dim, h, w = embedding.shape
-            out_feat = rearrange(embedding, 'b c h w -> (b h w) c')
+            out_feat = rearrange(embedding, "b c h w -> (b h w) c")
             out_feat = self.feat_norm(out_feat)  # (n, dim)
 
             # cosine sim
             out_feat = l2_normalize(out_feat)  # cosine sim norm
             self.prototypes.data.copy_(l2_normalize(self.prototypes))
 
-            feat_proto_sim = torch.einsum('nd,kmd->nmk', out_feat,
-                                          self.prototypes)  # [n, dim], [csl, 10, dim] -> [n, 10, cls]
+            feat_proto_sim = torch.einsum(
+                "nd,kmd->nmk", out_feat, self.prototypes
+            )  # [n, dim], [csl, p, dim] -> [n, p, cls]
 
             nearest_proto_distance = torch.amax(feat_proto_sim, dim=1)
             nearest_proto_distance = self.mask_norm(nearest_proto_distance)
-            nearest_proto_distance = rearrange(nearest_proto_distance, "(b h w) k -> b k h w",
-                                               b=b, h=h)
+            nearest_proto_distance = rearrange(
+                nearest_proto_distance, "(b h w) k -> b k h w", b=b, h=h
+            )
 
             label_expand = label.view(-1)
             eval_mask_expand = eval_mask.view(-1)
@@ -390,11 +458,11 @@ class SqueezeSegV3Proto(nn.Module):
                     nearest_proto_distance,
                     label_expand,
                     eval_mask_expand,
-                    feat_proto_sim
+                    feat_proto_sim,
                 )
 
-                return_dict['contrast_logits'] = contrast_logits
-                return_dict['contrast_target'] = contrast_target
+                return_dict["contrast_logits"] = contrast_logits
+                return_dict["contrast_target"] = contrast_target
         return return_dict
 
 
@@ -444,7 +512,7 @@ model_blocks = {
 
 class Backbone(nn.Module):
     """
-       Class for DarknetSeg. Subclasses PyTorch's own "nn" module
+    Class for DarknetSeg. Subclasses PyTorch's own "nn" module
     """
 
     def __init__(self, layers):
@@ -479,8 +547,12 @@ class Backbone(nn.Module):
         print("Original OS: ", current_os)
 
         if self.OS > current_os:
-            print("Can't do OS, ", self.OS,
-                  " because it is bigger than original ", current_os)
+            print(
+                "Can't do OS, ",
+                self.OS,
+                " because it is bigger than original ",
+                current_os,
+            )
         else:
 
             for i, stride in enumerate(reversed(self.strides), 0):
@@ -497,21 +569,52 @@ class Backbone(nn.Module):
 
         self.blocks = model_blocks[self.layers]
 
-        self.conv1 = nn.Conv2d(self.input_depth, 32, kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv1 = nn.Conv2d(
+            self.input_depth, 32, kernel_size=3, stride=1, padding=1, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(32, momentum=self.bn_d)
         self.relu1 = nn.LeakyReLU(0.1)
 
-        self.enc1 = self._make_enc_layer(SACBlock, [32, 64], self.blocks[0],
-                                         stride=self.strides[0], DS=True, bn_d=self.bn_d)
-        self.enc2 = self._make_enc_layer(SACBlock, [64, 128], self.blocks[1],
-                                         stride=self.strides[1], DS=True, bn_d=self.bn_d)
-        self.enc3 = self._make_enc_layer(SACBlock, [128, 256], self.blocks[2],
-                                         stride=self.strides[2], DS=True, bn_d=self.bn_d)
-        self.enc4 = self._make_enc_layer(SACBlock, [256, 256], self.blocks[3],
-                                         stride=self.strides[3], DS=False, bn_d=self.bn_d)
-        self.enc5 = self._make_enc_layer(SACBlock, [256, 256], self.blocks[4],
-                                         stride=self.strides[4], DS=False, bn_d=self.bn_d)
+        self.enc1 = self._make_enc_layer(
+            SACBlock,
+            [32, 64],
+            self.blocks[0],
+            stride=self.strides[0],
+            DS=True,
+            bn_d=self.bn_d,
+        )
+        self.enc2 = self._make_enc_layer(
+            SACBlock,
+            [64, 128],
+            self.blocks[1],
+            stride=self.strides[1],
+            DS=True,
+            bn_d=self.bn_d,
+        )
+        self.enc3 = self._make_enc_layer(
+            SACBlock,
+            [128, 256],
+            self.blocks[2],
+            stride=self.strides[2],
+            DS=True,
+            bn_d=self.bn_d,
+        )
+        self.enc4 = self._make_enc_layer(
+            SACBlock,
+            [256, 256],
+            self.blocks[3],
+            stride=self.strides[3],
+            DS=False,
+            bn_d=self.bn_d,
+        )
+        self.enc5 = self._make_enc_layer(
+            SACBlock,
+            [256, 256],
+            self.blocks[4],
+            stride=self.strides[4],
+            DS=False,
+            bn_d=self.bn_d,
+        )
 
         self.dropout = nn.Dropout2d(self.drop_prob)
 
@@ -522,13 +625,22 @@ class Backbone(nn.Module):
 
         inplanes = planes[0]
         for i in range(0, blocks):
-            layers.append(("residual_{}".format(i),
-                           block(inplanes, planes, bn_d)))
+            layers.append(("residual_{}".format(i), block(inplanes, planes, bn_d)))
         if DS == True:
-            layers.append(("conv", nn.Conv2d(planes[0], planes[1],
-                                             kernel_size=3,
-                                             stride=[1, stride], dilation=1,
-                                             padding=1, bias=False)))
+            layers.append(
+                (
+                    "conv",
+                    nn.Conv2d(
+                        planes[0],
+                        planes[1],
+                        kernel_size=3,
+                        stride=[1, stride],
+                        dilation=1,
+                        padding=1,
+                        bias=False,
+                    ),
+                )
+            )
             layers.append(("bn", nn.BatchNorm2d(planes[1], momentum=bn_d)))
             layers.append(("relu", nn.LeakyReLU(0.1)))
 
@@ -557,8 +669,12 @@ class Backbone(nn.Module):
         xyz, feature, skips, os = self.run_layer(xyz, feature, self.enc1, skips, os)
         xyz, feature, skips, os = self.run_layer(xyz, feature, self.enc2, skips, os)
         xyz, feature, skips, os = self.run_layer(xyz, feature, self.enc3, skips, os)
-        xyz, feature, skips, os = self.run_layer(xyz, feature, self.enc4, skips, os, flag=False)
-        xyz, feature, skips, os = self.run_layer(xyz, feature, self.enc5, skips, os, flag=False)
+        xyz, feature, skips, os = self.run_layer(
+            xyz, feature, self.enc4, skips, os, flag=False
+        )
+        xyz, feature, skips, os = self.run_layer(
+            xyz, feature, self.enc5, skips, os, flag=False
+        )
 
         return feature, skips
 
@@ -572,12 +688,14 @@ class Backbone(nn.Module):
 class BasicBlock(nn.Module):
     def __init__(self, inplanes, planes, bn_d=0.1):
         super(BasicBlock, self).__init__()
-        self.conv1 = nn.Conv2d(inplanes, planes[0], kernel_size=1,
-                               stride=1, padding=0, bias=False)
+        self.conv1 = nn.Conv2d(
+            inplanes, planes[0], kernel_size=1, stride=1, padding=0, bias=False
+        )
         self.bn1 = nn.BatchNorm2d(planes[0], momentum=bn_d)
         self.relu1 = nn.LeakyReLU(0.1)
-        self.conv2 = nn.Conv2d(planes[0], planes[1], kernel_size=3,
-                               stride=1, padding=1, bias=False)
+        self.conv2 = nn.Conv2d(
+            planes[0], planes[1], kernel_size=3, stride=1, padding=1, bias=False
+        )
         self.bn2 = nn.BatchNorm2d(planes[1], momentum=bn_d)
         self.relu2 = nn.LeakyReLU(0.1)
 
@@ -598,9 +716,10 @@ class BasicBlock(nn.Module):
 
 # ******************************************************************************
 
+
 class Decoder(nn.Module):
     """
-       Class for DarknetSeg. Subclasses PyTorch's own "nn" module
+    Class for DarknetSeg. Subclasses PyTorch's own "nn" module
     """
 
     def __init__(self, OS=32, feature_depth=1024):
@@ -629,18 +748,24 @@ class Decoder(nn.Module):
         print("Decoder strides: ", self.strides)
 
         # decoder
-        self.dec5 = self._make_dec_layer(BasicBlock,
-                                         [self.backbone_feature_depth, 256],
-                                         bn_d=self.bn_d,
-                                         stride=self.strides[0])
-        self.dec4 = self._make_dec_layer(BasicBlock, [256, 256], bn_d=self.bn_d,
-                                         stride=self.strides[1])
-        self.dec3 = self._make_dec_layer(BasicBlock, [256, 128], bn_d=self.bn_d,
-                                         stride=self.strides[2])
-        self.dec2 = self._make_dec_layer(BasicBlock, [128, 64], bn_d=self.bn_d,
-                                         stride=self.strides[3])
-        self.dec1 = self._make_dec_layer(BasicBlock, [64, 32], bn_d=self.bn_d,
-                                         stride=self.strides[4])
+        self.dec5 = self._make_dec_layer(
+            BasicBlock,
+            [self.backbone_feature_depth, 256],
+            bn_d=self.bn_d,
+            stride=self.strides[0],
+        )
+        self.dec4 = self._make_dec_layer(
+            BasicBlock, [256, 256], bn_d=self.bn_d, stride=self.strides[1]
+        )
+        self.dec3 = self._make_dec_layer(
+            BasicBlock, [256, 128], bn_d=self.bn_d, stride=self.strides[2]
+        )
+        self.dec2 = self._make_dec_layer(
+            BasicBlock, [128, 64], bn_d=self.bn_d, stride=self.strides[3]
+        )
+        self.dec1 = self._make_dec_layer(
+            BasicBlock, [64, 32], bn_d=self.bn_d, stride=self.strides[4]
+        )
 
         # layer list to execute with skips
         self.layers = [self.dec5, self.dec4, self.dec3, self.dec2, self.dec1]
@@ -656,12 +781,22 @@ class Decoder(nn.Module):
 
         #  downsample
         if stride == 2:
-            layers.append(("upconv", nn.ConvTranspose2d(planes[0], planes[1],
-                                                        kernel_size=[1, 4], stride=[1, 2],
-                                                        padding=[0, 1])))
+            layers.append(
+                (
+                    "upconv",
+                    nn.ConvTranspose2d(
+                        planes[0],
+                        planes[1],
+                        kernel_size=[1, 4],
+                        stride=[1, 2],
+                        padding=[0, 1],
+                    ),
+                )
+            )
         else:
-            layers.append(("conv", nn.Conv2d(planes[0], planes[1],
-                                             kernel_size=3, padding=1)))
+            layers.append(
+                ("conv", nn.Conv2d(planes[0], planes[1], kernel_size=3, padding=1))
+            )
         layers.append(("bn", nn.BatchNorm2d(planes[1], momentum=bn_d)))
         layers.append(("relu", nn.LeakyReLU(0.1)))
 
@@ -679,6 +814,7 @@ class Decoder(nn.Module):
         return x, skips, os
 
     def forward(self, x, skips):
+
         os = self.backbone_OS
 
         # run layers
@@ -696,26 +832,37 @@ class Decoder(nn.Module):
         return self.last_channels
 
 
-if __name__ == '__main__':
-    bs = 1
-    c = 5
-    h = 40  # 64
-    w = 1800  # 512
-    x = torch.randn((bs, c, h, w)).cuda()
-    label = torch.ones_like(x).cuda()
-    eval_mask = torch.ones_like(x).cuda()
-    model = SqueezeSegV3Proto(nclasses=20,
-                              proj_dim=128,
-                              projection='v1',
-                              proj_feat='mix',
-                              l2_norm=True,
-                              proto_mom=0.999,
-                              ignore_label=0,
-                              sub_proto_size=20,
-                              use_prototype=True,
-                              # dataset='SemanticPOSS',
-                              ).cuda()
-    z1 = model(x, label=label, eval_mask=eval_mask, return_feat=True, proto_loss=False, proto_pl=None, )
-    print(z1['feat_2d'].shape)  # b, c, h, w
-    print(z1['pred_2d'].shape)  # b, c, h, w
-    print(model.prototypes.shape)  # cls, proto, dim
+if __name__ == "__main__":
+
+    def test_model():
+        bs = 1
+        c = 5
+        h = 40  
+        w = 1800  
+        x = torch.randn((bs, c, h, w)).cuda()
+        label = torch.ones_like(x).cuda()
+        eval_mask = torch.ones_like(x).cuda()
+        model = SqueezeSegV3Proto(
+            nclasses=20,
+            proj_dim=128,
+            projection="v1",
+            proj_feat="mix",
+            l2_norm=True,
+            proto_mom=0.999,
+            ignore_label=0,
+            sub_proto_size=20,
+            use_prototype=True,
+            # dataset='SemanticPOSS',
+        ).cuda()
+        z1 = model(
+            x,
+            label=label,
+            eval_mask=eval_mask,
+            return_feat=True,
+            proto_loss=False,
+            proto_pl=None,
+        )
+        print(z1["feat_2d"].shape)  # b, c, h, w
+        print(z1["pred_2d"].shape)  # b, c, h, w
+        print(model.prototypes.shape)  # cls, proto, dim
+        

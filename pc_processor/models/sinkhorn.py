@@ -2,7 +2,9 @@ import torch
 import torch.nn.functional as F
 
 
-def distributed_sinkhorn(out, sinkhorn_iterations=3, epsilon=0.05):  # (n_pixels, k)  (n, 10)
+def distributed_sinkhorn(
+    out, sinkhorn_iterations=3, epsilon=0.05
+):  # (n_pixels, k)  (n, p)
     Q = torch.exp(out / epsilon).t()  # (B, K) -> (K x B)
     B = Q.shape[1]
     K = Q.shape[0]
@@ -18,7 +20,7 @@ def distributed_sinkhorn(out, sinkhorn_iterations=3, epsilon=0.05):  # (n_pixels
         Q /= K
 
         # normalize each column: total weight per sample must be 1/B
-        Q /= torch.sum(Q, dim=0, keepdim=True)  # (K x B) / (1 x B) 让子类别之和为 1
+        Q /= torch.sum(Q, dim=0, keepdim=True)  # (K x B) / (1 x B), make sum to 1
         Q /= B
 
     Q *= B  # the colomns must sum to 1 so that Q is an assignment
@@ -29,5 +31,5 @@ def distributed_sinkhorn(out, sinkhorn_iterations=3, epsilon=0.05):  # (n_pixels
     Q = F.gumbel_softmax(Q, tau=0.5, hard=True)
 
     return Q, indexs
-    # Q: (n, 10) 表示每个pixel属于哪一个 sub class 的 one-hot label
-    # index: (n, ) 表示每个pixel属于哪一个sub class # torch.unique(indexs) = [0, 1, 2, 3, 4, 5, 6, 7, 8, 9]
+    # Q: (n, 10) is pixel belongs to which prototype, it's a one-hot label
+    # index: (n, ) is prototype index

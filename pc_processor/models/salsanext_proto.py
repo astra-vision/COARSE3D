@@ -1,6 +1,7 @@
 # !/usr/bin/env python3
 # This file is covered by the LICENSE file in the root of this project.
 
+# import re
 import torch
 import torch.distributed as dist
 import torch.nn as nn
@@ -8,6 +9,9 @@ import torch.nn.functional as F
 from einops import rearrange, repeat
 from timm.models.layers import trunc_normal_
 
+# import sys
+
+# sys.path.insert(0, "../../")
 from pc_processor.models.projector import ProjectionV1
 from pc_processor.models.sinkhorn import distributed_sinkhorn
 
@@ -15,9 +19,15 @@ from pc_processor.models.sinkhorn import distributed_sinkhorn
 def momentum_update(old_value, new_value, momentum, debug=False):
     update = momentum * old_value + (1 - momentum) * new_value
     if debug:
-        print("# old prot: {:.3f} x |{:.3f}|, new val: {:.3f} x |{:.3f}|, result= |{:.3f}|".format(
-            momentum, torch.norm(old_value, p=2), (1 - momentum), torch.norm(new_value, p=2),
-            torch.norm(update, p=2)))
+        print(
+            "# old prot: {:.3f} x |{:.3f}|, new val: {:.3f} x |{:.3f}|, result= |{:.3f}|".format(
+                momentum,
+                torch.norm(old_value, p=2),
+                (1 - momentum),
+                torch.norm(new_value, p=2),
+                torch.norm(update, p=2),
+            )
+        )
     return update
 
 
@@ -56,23 +66,37 @@ class ResContextBlock(nn.Module):
 
 
 class ResBlock(nn.Module):
-    def __init__(self, in_filters, out_filters, dropout_rate, kernel_size=(3, 3), stride=1,
-                 pooling=True, drop_out=True):
+    def __init__(
+        self,
+        in_filters,
+        out_filters,
+        dropout_rate,
+        kernel_size=(3, 3),
+        stride=1,
+        pooling=True,
+        drop_out=True,
+    ):
         super(ResBlock, self).__init__()
         self.pooling = pooling
         self.drop_out = drop_out
-        self.conv1 = nn.Conv2d(in_filters, out_filters, kernel_size=(1, 1), stride=stride)
+        self.conv1 = nn.Conv2d(
+            in_filters, out_filters, kernel_size=(1, 1), stride=stride
+        )
         self.act1 = nn.LeakyReLU()
 
         self.conv2 = nn.Conv2d(in_filters, out_filters, kernel_size=(3, 3), padding=1)
         self.act2 = nn.LeakyReLU()
         self.bn1 = nn.BatchNorm2d(out_filters)
 
-        self.conv3 = nn.Conv2d(out_filters, out_filters, kernel_size=(3, 3), dilation=2, padding=2)
+        self.conv3 = nn.Conv2d(
+            out_filters, out_filters, kernel_size=(3, 3), dilation=2, padding=2
+        )
         self.act3 = nn.LeakyReLU()
         self.bn2 = nn.BatchNorm2d(out_filters)
 
-        self.conv4 = nn.Conv2d(out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1)
+        self.conv4 = nn.Conv2d(
+            out_filters, out_filters, kernel_size=(2, 2), dilation=2, padding=1
+        )
         self.act4 = nn.LeakyReLU()
         self.bn3 = nn.BatchNorm2d(out_filters)
 
@@ -125,7 +149,9 @@ class ResBlock(nn.Module):
 
 
 class UpBlock(nn.Module):
-    def __init__(self, in_filters, out_filters, dropout_rate, drop_out=True, inplace=False):
+    def __init__(
+        self, in_filters, out_filters, dropout_rate, drop_out=True, inplace=False
+    ):
         super(UpBlock, self).__init__()
         self.drop_out = drop_out
         self.in_filters = in_filters
@@ -135,7 +161,9 @@ class UpBlock(nn.Module):
 
         self.dropout2 = nn.Dropout2d(p=dropout_rate)
 
-        self.conv1 = nn.Conv2d(in_filters // 4 + 2 * out_filters, out_filters, (3, 3), padding=1)
+        self.conv1 = nn.Conv2d(
+            in_filters // 4 + 2 * out_filters, out_filters, (3, 3), padding=1
+        )
         self.act1 = nn.LeakyReLU(inplace=inplace)
         self.bn1 = nn.BatchNorm2d(out_filters)
 
@@ -186,9 +214,9 @@ class UpBlock(nn.Module):
 
 #
 class FC(nn.Module):
-    '''
+    """
     a classifier, for pretrain ImageNet
-    '''
+    """
 
     def __init__(self, base_channels):
         super(FC, self).__init__()
@@ -212,7 +240,7 @@ class SEBlock(nn.Module):
             nn.ReLU(),
             # nn.ReLU(inplace=True),
             nn.Linear(inplanes // r, inplanes),
-            nn.Sigmoid()
+            nn.Sigmoid(),
         )
 
     def forward(self, x):
@@ -222,105 +250,21 @@ class SEBlock(nn.Module):
         return x.mul(se_weight)
 
 
-class Classifier_Module2(nn.Module):
-    def __init__(self, inplanes, dilation_series, padding_series, num_classes, droprate=0.1, use_se=True, channel=256):
-        super(Classifier_Module2, self).__init__()
-        self.conv2d_list = nn.ModuleList()
-        self.conv2d_list.append(
-            nn.Sequential(*[
-                nn.Conv2d(inplanes, channel, kernel_size=1, stride=1, padding=0, dilation=1, bias=True),
-                nn.GroupNorm(num_groups=int(channel / 8), num_channels=channel, affine=True),
-                nn.ReLU()
-                # nn.ReLU(inplace=True)
-            ]
-                          ))
-
-        for dilation, padding in zip(dilation_series, padding_series):
-            # self.conv2d_list.append(
-            #    nn.BatchNorm2d(inplanes))
-            self.conv2d_list.append(
-                nn.Sequential(*[
-                    # nn.ReflectionPad2d(padding),
-                    nn.Conv2d(inplanes, channel, kernel_size=3, stride=1, padding=padding, dilation=dilation,
-                              bias=True),
-                    nn.GroupNorm(num_groups=int(channel / 8), num_channels=channel, affine=True),
-                    nn.ReLU()
-                    # nn.ReLU(inplace=True)
-                ]))
-
-        if use_se:
-            self.bottleneck = nn.Sequential(*[SEBlock(channel * (len(dilation_series) + 1)),
-                                              nn.Conv2d(channel * (len(dilation_series) + 1), channel, kernel_size=3,
-                                                        stride=1,
-                                                        padding=1, dilation=1, bias=True),
-                                              nn.GroupNorm(num_groups=int(channel / 8), num_channels=channel,
-                                                           affine=True)])
-        else:
-            self.bottleneck = nn.Sequential(*[
-                nn.Conv2d(channel * (len(dilation_series) + 1), channel, kernel_size=3, stride=1, padding=1, dilation=1,
-                          bias=True),
-                nn.GroupNorm(num_groups=int(channel / 8), num_channels=channel, affine=True)])
-
-        self.head = nn.Sequential(*[nn.Dropout2d(droprate),
-                                    nn.Conv2d(channel, num_classes, kernel_size=1, padding=0, dilation=1, bias=False)])
-
-        ####init###
-        for m in self.conv2d_list:
-            if isinstance(m, nn.Conv2d):
-                torch.nn.init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.InstanceNorm2d) or isinstance(m, nn.GroupNorm):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-        for m in self.bottleneck:
-            if isinstance(m, nn.Conv2d):
-                torch.nn.init.kaiming_normal_(m.weight.data, a=0, mode='fan_in')
-                m.bias.data.zero_()
-            elif isinstance(m, nn.Linear):
-                torch.nn.init.kaiming_normal_(m.weight.data, a=0, mode='fan_out')
-                m.bias.data.zero_()
-            elif isinstance(m, nn.BatchNorm2d) or isinstance(m, nn.InstanceNorm2d) or isinstance(m,
-                                                                                                 nn.GroupNorm) or isinstance(
-                m, nn.LayerNorm):
-                m.weight.data.fill_(1)
-                m.bias.data.zero_()
-
-        for m in self.head:
-            if isinstance(m, nn.Conv2d):
-                m.weight.data.normal_(0, 0.001)
-
-    def forward(self, x, get_feat=True):
-        out = self.conv2d_list[0](x)  # torch.Size([2, 256, 4, 32])
-        for i in range(len(self.conv2d_list) - 1):
-            out = torch.cat((out, self.conv2d_list[i + 1](x)), 1)  # torch.Size([2, 1280, 65, 113]) 不改变size
-        out = self.bottleneck(out)  # [1, 256, 65, 113]
-        if get_feat:
-            out_dict = {}
-            out = self.head[0](out)
-            out_dict['feat'] = out
-            out = self.head[1](out)
-            out_dict['out'] = out
-            return out_dict
-        else:
-            out = self.head(out)
-            return out
-
-
 class SalsaNextProto(nn.Module):
-    def __init__(self,
-                 in_channel=5,
-                 nclasses=20,
-                 sub_proto_size=20,
-                 ignore_label=0,
-                 use_prototype=False,
-                 softmax=True,
-                 proj_dim=256,
-                 projection='v1',
-                 classification=False,
-                 proto_mom=0.999,
-                 dataset='SemanticKitti',
-                 ):
+    def __init__(
+        self,
+        in_channel=5,
+        nclasses=20,
+        sub_proto_size=20,
+        ignore_label=0,
+        use_prototype=False,
+        softmax=True,
+        proj_dim=256,
+        projection="v1",
+        classification=False,
+        proto_mom=0.999,
+        dataset="SemanticKitti",
+    ):
         super(SalsaNextProto, self).__init__()
         self.nclasses = nclasses
         self.base_channels = 32
@@ -341,11 +285,25 @@ class SalsaNextProto(nn.Module):
         self.downCntx2 = ResContextBlock(self.base_channels, self.base_channels)
         self.downCntx3 = ResContextBlock(self.base_channels, self.base_channels)
 
-        self.resBlock1 = ResBlock(self.base_channels, 2 * self.base_channels, 0.2, pooling=True, drop_out=False)
-        self.resBlock2 = ResBlock(2 * self.base_channels, 2 * 2 * self.base_channels, 0.2, pooling=True)
-        self.resBlock3 = ResBlock(2 * 2 * self.base_channels, 2 * 4 * self.base_channels, 0.2, pooling=True)
-        self.resBlock4 = ResBlock(2 * 4 * self.base_channels, 2 * 4 * self.base_channels, 0.2, pooling=True)
-        self.resBlock5 = ResBlock(2 * 4 * self.base_channels, 2 * 4 * self.base_channels, 0.2, pooling=False)
+        self.resBlock1 = ResBlock(
+            self.base_channels,
+            2 * self.base_channels,
+            0.2,
+            pooling=True,
+            drop_out=False,
+        )
+        self.resBlock2 = ResBlock(
+            2 * self.base_channels, 2 * 2 * self.base_channels, 0.2, pooling=True
+        )
+        self.resBlock3 = ResBlock(
+            2 * 2 * self.base_channels, 2 * 4 * self.base_channels, 0.2, pooling=True
+        )
+        self.resBlock4 = ResBlock(
+            2 * 4 * self.base_channels, 2 * 4 * self.base_channels, 0.2, pooling=True
+        )
+        self.resBlock5 = ResBlock(
+            2 * 4 * self.base_channels, 2 * 4 * self.base_channels, 0.2, pooling=False
+        )
 
         if self.classification:
             self.fc = FC(2 * 4 * self.base_channels)
@@ -353,25 +311,34 @@ class SalsaNextProto(nn.Module):
         self.upBlock1 = UpBlock(2 * 4 * self.base_channels, 4 * self.base_channels, 0.2)
         self.upBlock2 = UpBlock(4 * self.base_channels, 4 * self.base_channels, 0.2)
         self.upBlock3 = UpBlock(4 * self.base_channels, 2 * self.base_channels, 0.2)
-        self.upBlock4 = UpBlock(2 * self.base_channels, self.base_channels, 0.2,
-                                drop_out=False)  # , inplace=self.inplace)
+        self.upBlock4 = UpBlock(
+            2 * self.base_channels, self.base_channels, 0.2, drop_out=False
+        )  # , inplace=self.inplace)
 
         self.cls_head = nn.Conv2d(self.base_channels, nclasses, kernel_size=(1, 1))
 
         self.projector = ProjectionV1(self.base_channels * 22, proj_dim)
 
-        self.prototypes = nn.Parameter(torch.randn(nclasses, sub_proto_size, proj_dim), requires_grad=False)
+        self.prototypes = nn.Parameter(
+            torch.randn(nclasses, sub_proto_size, proj_dim), requires_grad=False
+        )
         trunc_normal_(self.prototypes, std=0.02)
 
         self.feat_norm = nn.LayerNorm(proj_dim)
         self.mask_norm = nn.LayerNorm(nclasses)
 
-    def _make_pred_layer(self, block, inplanes, dilation_series, padding_series, num_classes, channel):
-        return block(inplanes, dilation_series, padding_series, num_classes, channel=channel)
+    def _make_pred_layer(
+        self, block, inplanes, dilation_series, padding_series, num_classes, channel
+    ):
+        return block(
+            inplanes, dilation_series, padding_series, num_classes, channel=channel
+        )
 
-    def prototype_learning(self, out_feat, nearest_proto_distance, label, eval_mask, feat_proto_sim):
+    def prototype_learning(
+        self, out_feat, nearest_proto_distance, label, eval_mask, feat_proto_sim
+    ):
         pred_seg = torch.max(nearest_proto_distance, 1)[1]  # the idx of the nearest
-        mask = (label == pred_seg.view(-1))
+        mask = label == pred_seg.view(-1)
 
         cosine_similarity = feat_proto_sim.reshape(feat_proto_sim.shape[0], -1)
 
@@ -397,29 +364,32 @@ class SalsaNextProto(nn.Module):
 
             feat_c = out_feat[label == id_c, ...]  # [n, 720]
 
-            m_c_tile = repeat(m_c, 'n -> n tile', tile=self.sub_proto_size)  # [n, 10]
+            m_c_tile = repeat(m_c, "n -> n tile", tile=self.sub_proto_size)  # [n, p]
 
-            m_q = q * m_c_tile  # (n x 10) (n x 10) -> (n x 10) masked one hot label
+            m_q = q * m_c_tile  # (n x p) (n x p) -> (n x p) masked one hot label
 
-            m_c_tile = repeat(m_c, 'n -> n tile', tile=feat_c.shape[-1])  # [n, dim]
+            m_c_tile = repeat(m_c, "n -> n tile", tile=feat_c.shape[-1])  # [n, dim]
 
             c_q = feat_c * m_c_tile  # [n, dim]
 
-            f = m_q.transpose(0, 1) @ c_q  # (10, n) (n, dim) => (10, dim)
+            f = m_q.transpose(0, 1) @ c_q  # (p, n) (n, dim) => (p, dim)
 
-            n = torch.sum(m_q, dim=0)  # (n, 10) => 10
+            n = torch.sum(m_q, dim=0)  # (n, p) => p
 
             if torch.sum(n) > 0:
-                f = F.normalize(f, p=2, dim=-1)  # [10, 720]
+                f = F.normalize(f, p=2, dim=-1)  # [p, dim]
 
-                new_value = momentum_update(old_value=protos[id_c, n != 0, :],
-                                            new_value=f[n != 0, :],
-                                            momentum=self.proto_mom,
-                                            debug=False,
-                                            )
+                new_value = momentum_update(
+                    old_value=protos[id_c, n != 0, :],
+                    new_value=f[n != 0, :],
+                    momentum=self.proto_mom,
+                    debug=False,
+                )
                 protos[id_c, n != 0, :] = new_value
 
-            proto_target[label == id_c] = indexs.float() + (self.sub_proto_size * id_c)  # (n, ) cls*k classes totally
+            proto_target[label == id_c] = indexs.float() + (
+                self.sub_proto_size * id_c
+            )  # (n, ) cls*k classes totally
 
         self.prototypes = nn.Parameter(l2_normalize(protos), requires_grad=False)
 
@@ -431,12 +401,29 @@ class SalsaNextProto(nn.Module):
 
         return proto_logits, proto_target
 
-    def forward(self, x, label=None, eval_mask=None, return_feat=False, proto_loss=False, proto_pl=None):
+    def forward(
+        self,
+        x,
+        label=None,
+        eval_mask=None,
+        return_feat=True,
+        proto_loss=False,
+        proto_pl=None,
+    ):
+
+        bs = 1
+        c = 5
+        h = 64
+        w = 2048
+        x = torch.randn((bs, c, h, w)).cuda()
+        label = torch.ones((bs, h, w)) * 2
+        label = label.cuda()
+        eval_mask = torch.ones((bs, h, w)).cuda()
 
         b, c, h, w = x.shape
 
         # pad
-        if self.dataset == 'SemanticPOSS':
+        if self.dataset == "SemanticPOSS":
             new_x = torch.zeros((b, c, h + 8, w + 8)).cuda()
             new_x[:, :, :h, :w] = x
             x = new_x
@@ -467,54 +454,68 @@ class SalsaNextProto(nn.Module):
         logits = self.cls_head(up1e)
 
         # de pad
-        if self.dataset == 'SemanticPOSS':
+        if self.dataset == "SemanticPOSS":
             logits = logits[:, :, :-8, :-8]
 
         probs = F.softmax(logits, dim=1)
 
         return_dict = {}
-        return_dict['pred_2d'] = probs
+        return_dict["pred_2d"] = probs
 
         # contrast learning
         if return_feat:
             _, _, h, w = logits.shape
             h = int(h / 2)
             w = int(w / 2)
-            feat0 = F.interpolate(down0b, size=(h, w), mode="bilinear", align_corners=True)
-            feat1 = F.interpolate(down1b, size=(h, w), mode="bilinear", align_corners=True)
-            feat2 = F.interpolate(down2b, size=(h, w), mode="bilinear", align_corners=True)
-            feat3 = F.interpolate(down3b, size=(h, w), mode="bilinear", align_corners=True)
+            feat0 = F.interpolate(
+                down0b, size=(h, w), mode="bilinear", align_corners=True
+            )
+            feat1 = F.interpolate(
+                down1b, size=(h, w), mode="bilinear", align_corners=True
+            )
+            feat2 = F.interpolate(
+                down2b, size=(h, w), mode="bilinear", align_corners=True
+            )
+            feat3 = F.interpolate(
+                down3b, size=(h, w), mode="bilinear", align_corners=True
+            )
             feat = torch.cat([feat0, feat1, feat2, feat3], 1)
             embedding = self.projector(feat)
 
             embedding = F.normalize(embedding, p=2, dim=1)  # b, dim, h, w
 
             _, _, h_lbl, w_lbl = logits.shape
-            embedding = F.interpolate(embedding, (h_lbl, w_lbl), mode="bilinear", align_corners=True)
+            embedding = F.interpolate(
+                embedding, (h_lbl, w_lbl), mode="bilinear", align_corners=True
+            )
 
-            return_dict['feat_2d'] = embedding  # b, dim, h, w
+            return_dict["feat_2d"] = embedding  # b, dim, h, w
 
             if self.use_prototype and label is not None and eval_mask is not None:
                 # prototype learning
                 b, dim, h, w = embedding.shape
-                out_feat = rearrange(embedding, 'b c h w -> (b h w) c')
+                out_feat = rearrange(embedding, "b c h w -> (b h w) c")
                 out_feat = self.feat_norm(out_feat)  # (n, dim)
 
                 # cosine sim
                 out_feat = l2_normalize(out_feat)
                 self.prototypes.data.copy_(l2_normalize(self.prototypes))
 
-                feat_proto_sim = torch.einsum('nd,kmd->nmk', out_feat, self.prototypes)
+                feat_proto_sim = torch.einsum("nd,kmd->nmk", out_feat, self.prototypes)
 
                 nearest_proto_distance = torch.amax(feat_proto_sim, dim=1)
                 nearest_proto_distance = self.mask_norm(nearest_proto_distance)
-                nearest_proto_distance = rearrange(nearest_proto_distance, "(b h w) k -> b k h w", b=b,   h=h)
+                nearest_proto_distance = rearrange(
+                    nearest_proto_distance, "(b h w) k -> b k h w", b=b, h=h
+                )
 
                 label_expand = label.view(-1)
                 eval_mask_expand = eval_mask.view(-1)
 
                 if proto_pl is not None:
-                    self.prototypes = nn.Parameter(proto_pl.clone(), requires_grad=False)
+                    self.prototypes = nn.Parameter(
+                        proto_pl.clone(), requires_grad=False
+                    )
 
                 if proto_loss:
                     contrast_logits, contrast_target = self.prototype_learning(
@@ -522,10 +523,10 @@ class SalsaNextProto(nn.Module):
                         nearest_proto_distance,
                         label_expand,
                         eval_mask_expand,
-                        feat_proto_sim
+                        feat_proto_sim,
                     )
 
-                    return_dict['contrast_logits'] = contrast_logits
-                    return_dict['contrast_target'] = contrast_target
+                    return_dict["contrast_logits"] = contrast_logits
+                    return_dict["contrast_target"] = contrast_target
 
         return return_dict

@@ -9,19 +9,18 @@ from PIL import Image
 # ImageFile.LOAD_TRUNCATED_IMAGES = True
 
 
-
-
 class SemanticKitti(object):
-    def __init__(self,
-                 root,  # directory where data is #  [pcd_root, weak_root]
-                 sequences,  # sequences for this data (e.g. [1,3,4,6])
-                 config_path,  # directory of config file
-                 has_image=False,
-                 has_weak_label=False,
-                 weak_label_name='0.1_point',
-                 has_pcd=True,
-                 has_label=True
-                 ):
+    def __init__(
+        self,
+        root,  # directory where data is #  [pcd_root, weak_root]
+        sequences,  # sequences for this data (e.g. [1,3,4,6])
+        config_path,  # directory of config file
+        has_image=False,
+        has_weak_label=False,
+        weak_label_name="0.1_point",
+        has_pcd=True,
+        has_label=True,
+    ):
         self.root = root  #
         self.sequences = sequences
         self.sequences.sort()  # sort seq id
@@ -43,10 +42,14 @@ class SemanticKitti(object):
             else:
                 raise ValueError("Dataset not found: {}".format(i))
 
-        assert os.path.exists(self.root[0]), ValueError("Dataset not found: {}".format(self.root[0]))
+        assert os.path.exists(self.root[0]), ValueError(
+            "Dataset not found: {}".format(self.root[0])
+        )
 
         if self.has_weak_label:
-            assert os.path.exists(self.root[1]), ValueError("Dataset not found: {}".format(self.root[1]))
+            assert os.path.exists(self.root[1]), ValueError(
+                "Dataset not found: {}".format(self.root[1])
+            )
 
         self.pointcloud_files = []
         self.label_files = []
@@ -61,42 +64,60 @@ class SemanticKitti(object):
 
             # get file list from path
             pointcloud_path = os.path.join(self.root[0], seq, "velodyne")
-            pointcloud_files = [os.path.join(pointcloud_path, f) for f in os.listdir(
-                pointcloud_path) if ".bin" or '.npy' in f]
+            pointcloud_files = [
+                os.path.join(pointcloud_path, f)
+                for f in os.listdir(pointcloud_path)
+                if ".bin" or ".npy" in f
+            ]
             self.pointcloud_files.extend(pointcloud_files)
 
             if self.has_label:
                 label_path = os.path.join(self.root[0], seq, "labels")
-                label_files = [os.path.join(label_path, f)
-                               for f in os.listdir(label_path) if ".label" in f]
+                label_files = [
+                    os.path.join(label_path, f)
+                    for f in os.listdir(label_path)
+                    if ".label" in f
+                ]
                 # print('pcd label ', len(pointcloud_files), len(label_files))
-                assert (len(pointcloud_files) == len(label_files))
+                assert len(pointcloud_files) == len(label_files)
                 self.label_files.extend(label_files)
 
             if self.has_weak_label:
                 label_path = os.path.join(self.root[1], seq, self.weak_label_name)
-                weak_label_files = [os.path.join(label_path, f)
-                                    for f in os.listdir(label_path) if ".label" or '.npy' in f]
+                weak_label_files = [
+                    os.path.join(label_path, f)
+                    for f in os.listdir(label_path)
+                    if ".label" or ".npy" in f
+                ]
                 self.weak_label_files.extend(weak_label_files)
                 # print('pcd weak ', len(pointcloud_files), len(weak_label_files))
-                assert (len(pointcloud_files) == len(weak_label_files))
+                assert len(pointcloud_files) == len(weak_label_files)
 
             if self.has_image:
                 # image_path = os.path.join(self.root, seq, "image_2")
                 # if not os.path.exists(image_path):
-                image_path = os.path.join("/mnt/cephfs/dataset/pointclouds/semantic-kitti-fov/sequences/", seq,
-                                          "image_2")
-                image_files = [os.path.join(image_path, f) for f in os.listdir(
-                    image_path) if ".png" in f]
+                image_path = os.path.join(
+                    "/mnt/cephfs/dataset/pointclouds/semantic-kitti-fov/sequences/",
+                    seq,
+                    "image_2",
+                )
+                image_files = [
+                    os.path.join(image_path, f)
+                    for f in os.listdir(image_path)
+                    if ".png" in f
+                ]
                 # print('pcd img ', len(pointcloud_files), len(image_files))
-                assert (len(pointcloud_files) == len(image_files))
+                assert len(pointcloud_files) == len(image_files)
                 self.image_files.extend(image_files)
 
             # load calibration file
             if self.has_image:
                 # calib_path = os.path.join(self.root, seq, "calib.txt")
-                calib_path = os.path.join("/mnt/cephfs/dataset/pointclouds/semantic-kitti-fov/sequences/", seq,
-                                          "calib.txt")
+                calib_path = os.path.join(
+                    "/mnt/cephfs/dataset/pointclouds/semantic-kitti-fov/sequences/",
+                    seq,
+                    "calib.txt",
+                )
                 calib = self.read_calib(calib_path)
                 proj_matrix = np.matmul(calib["P2"], calib["Tr"])
                 self.proj_matrix[seq] = proj_matrix
@@ -110,8 +131,11 @@ class SemanticKitti(object):
             self.weak_label_files.sort()
         if self.has_image:
             self.image_files.sort()
-        print("Using {} pointclouds from sequences {}".format(
-            len(self.pointcloud_files), self.sequences))
+        print(
+            "Using {} pointclouds from sequences {}".format(
+                len(self.pointcloud_files), self.sequences
+            )
+        )
 
         # load config -------------------------------------
         # get color map
@@ -137,8 +161,7 @@ class SemanticKitti(object):
         for k, v in sem_color_inv_map.items():
             self.sem_color_lut_inv[k] = np.array(v, np.float32) / 255.0
 
-        self.inst_color_map = np.random.uniform(
-            low=0.0, high=1.0, size=(10000, 3))
+        self.inst_color_map = np.random.uniform(low=0.0, high=1.0, size=(10000, 3))
 
         # get learning class map
         # map unused classes to used classes
@@ -179,19 +202,19 @@ class SemanticKitti(object):
         :return: dict with calibration matrices.
         """
         calib_all = {}
-        with open(calib_path, 'r') as f:
+        with open(calib_path, "r") as f:
             for line in f.readlines():
-                if line == '\n':
+                if line == "\n":
                     break
-                key, value = line.split(':', 1)
+                key, value = line.split(":", 1)
                 calib_all[key] = np.array([float(x) for x in value.split()])
 
         # reshape matrices
         calib_out = {}
         # 3x4 projection matrix for left camera
-        calib_out['P2'] = calib_all['P2'].reshape(3, 4)
-        calib_out['Tr'] = np.identity(4)  # 4x4 matrix
-        calib_out['Tr'][:3, :4] = calib_all['Tr'].reshape(3, 4)
+        calib_out["P2"] = calib_all["P2"].reshape(3, 4)
+        calib_out["Tr"] = np.identity(4)  # 4x4 matrix
+        calib_out["Tr"][:3, :4] = calib_all["Tr"].reshape(3, 4)
         return calib_out
 
     def read_weak_label(self, filename):
@@ -200,7 +223,7 @@ class SemanticKitti(object):
 
     @staticmethod
     def readPCD(path):
-        if '.npy' in path:
+        if ".npy" in path:
             pcd = np.load(path)
         else:
             pcd = np.fromfile(path, dtype=np.float32).reshape(-1, 4)
@@ -208,7 +231,7 @@ class SemanticKitti(object):
 
     @staticmethod
     def readLabel(path):
-        if '.npy' in path:
+        if ".npy" in path:
             sem_label = np.load(path)
             inst_label = []
         else:
@@ -265,14 +288,21 @@ class SemanticKitti(object):
         proj_matrx = self.proj_matrix[seq]
         # only keep point in front of the vehicle
         keep_mask = pointcloud[:, 0] > 0
-        pointcloud_hcoord = np.concatenate([pointcloud[keep_mask], np.ones(
-            [keep_mask.sum(), 1], dtype=np.float32)], axis=1)
+        pointcloud_hcoord = np.concatenate(
+            [pointcloud[keep_mask], np.ones([keep_mask.sum(), 1], dtype=np.float32)],
+            axis=1,
+        )
         mapped_points = (proj_matrx @ pointcloud_hcoord.T).T  # n, 3
         # scale 2D points
-        mapped_points = mapped_points[:, :2] / \
-                        np.expand_dims(mapped_points[:, 2], axis=1)  # n, 2
-        keep_idx_pts = (mapped_points[:, 0] > 0) * (mapped_points[:, 0] < img_h) * (
-                mapped_points[:, 1] > 0) * (mapped_points[:, 1] < img_w)
+        mapped_points = mapped_points[:, :2] / np.expand_dims(
+            mapped_points[:, 2], axis=1
+        )  # n, 2
+        keep_idx_pts = (
+            (mapped_points[:, 0] > 0)
+            * (mapped_points[:, 0] < img_h)
+            * (mapped_points[:, 1] > 0)
+            * (mapped_points[:, 1] < img_w)
+        )
         keep_mask[keep_mask] = keep_idx_pts
         # fliplr so that indexing is row, col and not col, row
         mapped_points = np.fliplr(mapped_points)
@@ -280,5 +310,3 @@ class SemanticKitti(object):
 
     def __len__(self):
         return len(self.pointcloud_files)
-
-

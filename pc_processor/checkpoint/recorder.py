@@ -8,7 +8,7 @@ import tensorboardX
 
 class Recorder(object):
     def __init__(self, settings, use_tensorboard=True):
-        print('>> Init a recoder at ', settings.save_path)
+        print(">> Init a recoder at ", settings.save_path)
         self.save_path = settings.save_path
         self.settings = settings
         self.code_path = os.path.join(self.save_path, "code")
@@ -18,7 +18,9 @@ class Recorder(object):
         self.checkpoint_path = os.path.join(self.save_path, "checkpoint")
         self.plot_path = os.path.join(self.save_path, "plot")
         if use_tensorboard:
-            self.tensorboard = tensorboardX.SummaryWriter(logdir=self.save_path + "/tensorboard/")
+            self.tensorboard = tensorboardX.SummaryWriter(
+                logdir=self.save_path + "/tensorboard/"
+            )
         else:
             self.tensorboard = None
 
@@ -40,8 +42,8 @@ class Recorder(object):
     def _initLogger(self):
         logger = logging.getLogger("console")
         logger.propagate = False
-        file_formatter = logging.Formatter('%(asctime)s %(levelname)s: %(message)s')
-        console_formatter = logging.Formatter('%(message)s')
+        file_formatter = logging.Formatter("%(asctime)s %(levelname)s: %(message)s")
+        console_formatter = logging.Formatter("%(message)s")
         # file log
         file_handler = logging.FileHandler(os.path.join(self.log_path, "console.log"))
         file_handler.setFormatter(file_formatter)
@@ -70,7 +72,7 @@ class Recorder(object):
         file_list = os.listdir(root_path)
         for file_name in file_list:
             file_path = os.path.join(root_path, file_name)
-            print('Copy ', file_path)
+            print("Copy ", file_path)
             if os.path.isdir(file_path) and "log_" not in file_path:
                 dst_path = os.path.join(target_path, file_path)
                 self._copyFiles(file_path, dst_path)

@@ -1,7 +1,6 @@
 
-# COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation
 
-**COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation** 
+**COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation** (BMVC 2022)
 
 [Rong Li <sup>1</sup>](https://rongli.tech/),
 [Anh-Quan Cao <sup>2</sup>](https://anhquancao.github.io),
@@ -21,29 +20,28 @@ If you find this work or code useful, please cite our [paper](https://arxiv.org/
 @inproceedings{coarse3d,
 title={COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation},
 author={Rong Li, Anh-Quan Cao and Raoul de Charette},
-booktitle={xxx},
+booktitle={BMVC},
 year={2022},
 }
 ```
 
 # Teaser
 
-<img src="./Figures/semantickitti_0055_2x4_comp.gif" style="zoom: 200%;" />
+<img src="./Figures/ezgif-2-986f8bf4fb.gif" style="zoom: 200%;" />
 
 
 # Content
-
-* [Environment](#environment)
-* [Preparing Dataset](#preparing-dataset)
-  * [SemanticKITTI](#semantickitti)
-  * [SemanticPOSS](#semanticposs)
-  * [nuScenes](#nuscenes)
-* [Training](#training)
-* [Trained Models](#trained-models)
-* [Acknowledgement](#acknowledgement)
-* [Contact](#contact)
-* [License](#license)
-
+- [Teaser](#teaser)
+- [Content](#content)
+  - [Environment](#environment)
+  - [Preparing Dataset](#preparing-dataset)
+    - [SemanticKITTI](#semantickitti)
+    - [SemanticPOSS](#semanticposs)
+    - [nuScenes](#nuscenes)
+  - [Training](#training)
+  - [Trained Models](#trained-models)
+  - [Acknowledgement](#acknowledgement)
+  - [License](#license)
 
 
 ## Environment
@@ -187,10 +185,8 @@ Download the trained model you are interested, and put it on the `checkpoint` of
 
 
 ## Acknowledgement
-The code is based on [PMF](https://github.com/ICEORY/PMF). 
+This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1). Rong Li was funded by the South China University of Technology Machine Intelligence Laboratory([SMIL](https://tanmingkui.github.io/laboratory_students/)).
 
-## Contact
-If you have any questions or suggestions about this repo, please feel free to contact me (702451077@qq.com).
 
 ## License
 COARSE3D is released under the [Apache 2.0 license](./LICENSE).  

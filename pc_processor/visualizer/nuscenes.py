@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-# import sys 
+# import sys
 # sys.path.insert(0, "H:\\project\\202009Camera-lidar-segmentation\\poincloudProcessor")
 import os
 import open3d
@@ -7,6 +7,7 @@ from .common import getPointCloud, loadPCD
 import numpy as np
 from pc_processor.dataset.preprocess.augmentor import AugmentParams, Augmentor
 import matplotlib.pyplot as plt
+
 
 class nuScenesViewer(object):
     def __init__(self, dataset, show_img=False):
@@ -32,11 +33,11 @@ class nuScenesViewer(object):
             opt = vis.get_render_option()
             if os.path.isfile("option.json"):
                 opt.load_from_json("option.json")
-            
+
             pcd = self.loadPCD(self.dataset.getPCDPath(self.index))
             # pcd = loadPCD(self.pointcloud_files[self.index])
             # print(self.pointcloud_files[self.index])
-            
+
             # sem_label, _ = self.dataset.readLabel(self.dataset.label_files[self.index])
             # pred_file = "H:\\project\\202009Camera-lidar-segmentation\\experiments\\PMF-semantickitti\\preds\\sequences\\08\\predictions\\{:06d}.label".format(self.index)
             # pred_label, _ = self.dataset.readLabel(pred_file)
@@ -57,7 +58,9 @@ class nuScenesViewer(object):
             ctl = vis.get_view_control()
             param = open3d.io.read_pinhole_camera_parameters("./view.json")
             ctl.convert_from_pinhole_camera_parameters(param)
-            vis.capture_screen_image(os.path.join(self.save_path, "{:06d}.jpeg".format(self.index)))
+            vis.capture_screen_image(
+                os.path.join(self.save_path, "{:06d}.jpeg".format(self.index))
+            )
             # img = plt.imread("H:\\project\\202009Camera-lidar-segmentation\\paper_fig\\code\\visual_preds\\preds\\dense_preds\\{:06d}.jpeg".format(self.index))
             # self.ax.imshow(img)
             # plt.pause(0.1)
@@ -68,7 +71,7 @@ class nuScenesViewer(object):
             self.index += 1
             if self.index >= self.n_samples:
                 self.index = 0
-            update(vis)           
+            update(vis)
             return False
 
         def moveBackward(vis):
@@ -77,7 +80,7 @@ class nuScenesViewer(object):
             if self.index < 0:
                 self.index = self.n_samples - 1
             update(vis)
-            
+
             return False
 
         def saveOption(vis):
@@ -99,14 +102,15 @@ class nuScenesViewer(object):
         print("Press - to decrease point size")
         print("Press N to play previous frame")
         print("Press M to play next frame")
-        
+
         pcd = self.loadPCD(self.dataset.getPCDPath(self.index))
         pointcloud = getPointCloud(pcd)
         # img = open3d.io.read_image("H:\\project\\202009Camera-lidar-segmentation\\paper_fig\\code\\visual_preds\\preds\\dense_preds\\000000.jpeg")
         # img.
         # open3d.visualization.draw_geometries([img], point_show_normal=True)
         open3d.visualization.draw_geometries_with_key_callbacks(
-            [pointcloud], key_to_callback, width=960, height=480)
+            [pointcloud], key_to_callback, width=960, height=480
+        )
 
 
 # if __name__ == "__main__":

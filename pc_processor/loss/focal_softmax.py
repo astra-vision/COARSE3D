@@ -12,11 +12,13 @@ class FocalSoftmaxLoss(nn.Module):
 
         if isinstance(alpha, list):
             assert len(alpha) == n_classes, "len(alpha)!=n_classes: {} vs. {}".format(
-                len(alpha), n_classes)
+                len(alpha), n_classes
+            )
             self.alpha = torch.Tensor(alpha)
         elif isinstance(alpha, np.ndarray):
-            assert alpha.shape[0] == n_classes, "len(alpha)!=n_classes: {} vs. {}".format(
-                len(alpha), n_classes)
+            assert (
+                alpha.shape[0] == n_classes
+            ), "len(alpha)!=n_classes: {} vs. {}".format(len(alpha), n_classes)
             self.alpha = torch.from_numpy(alpha)
         else:
             assert alpha < 1 and alpha > 0, "invalid alpha: {}".format(alpha)
@@ -53,7 +55,7 @@ class FocalSoftmaxLoss(nn.Module):
         pred_logsoft = pred_softmax.clamp(1e-6).log()
         self.alpha = self.alpha.to(x.device)
         alpha = self.alpha.gather(0, target.squeeze())
-        loss = - (1 - pred_softmax).pow(self.gamma)
+        loss = -(1 - pred_softmax).pow(self.gamma)
         loss = loss * pred_logsoft * alpha
         loss_sum = loss.sum()
 
@@ -63,8 +65,11 @@ class FocalSoftmaxLoss(nn.Module):
             loss = (loss * mask).sum() / mask.sum()
 
             if torch.any(torch.isnan(loss)):
-                print('!!! ce loss is none, sum value is {}, unique target is {}'.format(
-                    loss_sum, torch.unique(target)))
+                print(
+                    "!!! ce loss is none, sum value is {}, unique target is {}".format(
+                        loss_sum, torch.unique(target)
+                    )
+                )
                 return torch.tensor(0.0).cuda()
 
             return loss
@@ -73,14 +78,6 @@ class FocalSoftmaxLoss(nn.Module):
 
 
 if __name__ == "__main__":
-    # criterion = FocalSoftmaxLoss(n_classes=10, gamma=1, alpha=0.8)
-    # target = torch.arange(0, 10)
-    # print(target)
-    # test_input = torch.rand(10, 10)
-    # mask = torch.ones(10)
-    # mask[4] = 0
-    # loss = criterion(test_input, target, mask)
-    # print(loss)
 
     criterion = FocalSoftmaxLoss(n_classes=20, gamma=1, alpha=0.8)
     target = torch.arange(0, 10)

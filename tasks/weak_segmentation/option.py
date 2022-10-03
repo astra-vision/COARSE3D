@@ -29,7 +29,9 @@ class Option(object):
         self.dist_url = "env://"
 
         self.print_frequency = self.config["print_frequency"]
-        self.n_threads = self.config["n_threads"]  # number of threads used for data loading
+        self.n_threads = self.config[
+            "n_threads"
+        ]  # number of threads used for data loading
         self.is_debug = self.config["is_debug"]
         self.pycharm = self.config["pycharm"]
         self.weak_label = self.config["weak_label"]
@@ -88,7 +90,9 @@ class Option(object):
         # backbone config ------------------
         self.net_type = self.config["net_type"]
         self.input_channels = self.config["input_channels"]
-        self.encoder_modules = yaml.safe_load(open(self.config['encoder_modules_path'], "r")).values()
+        self.encoder_modules = yaml.safe_load(
+            open(self.config["encoder_modules_path"], "r")
+        ).values()
 
         self._prepare()
 
@@ -96,15 +100,17 @@ class Option(object):
 
         self.save_path = os.path.join(
             self.save_path,
-            'debug-{}_{:02d}{:02d}_id-{}'.
-                format(
-                self.is_debug, datetime.date.today().month, datetime.date.today().day, self.experiment_id
-            )
+            "debug-{}_{:02d}{:02d}_id-{}".format(
+                self.is_debug,
+                datetime.date.today().month,
+                datetime.date.today().day,
+                self.experiment_id,
+            ),
         )
 
     def check_path(self):
         if pc_processor.utils.is_main_process():
-            assert os.path.exists(self.save_path) == False, 'This exp exists already!'
+            assert os.path.exists(self.save_path) == False, "This exp exists already!"
 
             if not os.path.isdir(self.save_path):
                 os.makedirs(self.save_path)

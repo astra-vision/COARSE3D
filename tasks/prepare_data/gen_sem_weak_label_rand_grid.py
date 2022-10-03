@@ -8,13 +8,13 @@ import open3d as o3d
 import torch
 import yaml
 
-sys.path.append('..')
+sys.path.append("..")
 
-EXTENSIONS_SCAN = ['.bin']
-EXTENSIONS_LABEL = ['.label']
-EXTENSIONS_OCOC_LABEL = ['.npy']
+EXTENSIONS_SCAN = [".bin"]
+EXTENSIONS_LABEL = [".label"]
+EXTENSIONS_OCOC_LABEL = [".npy"]
 
-os.environ["CUDA_VISIBLE_DEVICES"] = '3'
+os.environ["CUDA_VISIBLE_DEVICES"] = "3"
 
 
 def is_scan(filename):
@@ -29,14 +29,15 @@ def is_weak_label(filename):
     return any(filename.endswith(ext) for ext in EXTENSIONS_OCOC_LABEL)
 
 
-class SemanticData():
-    '''
+class SemanticData:
+    """
     be suitable for semantic poss and semantic kitti
-    '''
+    """
 
-    def __init__(self,
-                 args,
-                 ):
+    def __init__(
+        self,
+        args,
+    ):
         self.args = args
         self.mean_dxyzf = np.zeros(5)
         self.std_dxyzf = np.zeros(5)
@@ -44,12 +45,12 @@ class SemanticData():
 
         # read config
         data_config = yaml.safe_load(open(args.data_config_path, "r"))
-        self.mapped_class_name = data_config['mapped_class_name']
+        self.mapped_class_name = data_config["mapped_class_name"]
 
         self.label_map = np.zeros((360,)).astype(np.int32)
-        for key in data_config['learning_map'].keys():
+        for key in data_config["learning_map"].keys():
             # print(key, label_map[key])
-            self.label_map[key] = data_config['learning_map'][key]
+            self.label_map[key] = data_config["learning_map"][key]
 
         # read data
         self.scan_files = {}
@@ -66,7 +67,7 @@ class SemanticData():
 
         for seq in self.args.sequences:
             # to string
-            seq = '{0:02d}'.format(int(seq))
+            seq = "{0:02d}".format(int(seq))
             print("parsing seq {}".format(seq))
 
             # get paths for each
@@ -77,18 +78,29 @@ class SemanticData():
             assert os.path.exists(label_path)
 
             # create save path for generated weak label
-            os.makedirs(os.path.join(self.args.dataset_save, seq, self.args.weak_label_name), exist_ok=True)
+            os.makedirs(
+                os.path.join(self.args.dataset_save, seq, self.args.weak_label_name),
+                exist_ok=True,
+            )
 
             # get files
-            scan_files = [os.path.join(dp, f) for dp, dn, fn in os.walk(
-                os.path.expanduser(scan_path)) for f in fn if is_scan(f)]
+            scan_files = [
+                os.path.join(dp, f)
+                for dp, dn, fn in os.walk(os.path.expanduser(scan_path))
+                for f in fn
+                if is_scan(f)
+            ]
             print(scan_path)
-            label_files = [os.path.join(dp, f) for dp, dn, fn in os.walk(
-                os.path.expanduser(label_path)) for f in fn if is_label(f)]
+            label_files = [
+                os.path.join(dp, f)
+                for dp, dn, fn in os.walk(os.path.expanduser(label_path))
+                for f in fn
+                if is_label(f)
+            ]
 
             scan_files.sort()
             label_files.sort()
-            assert (len(scan_files) == len(label_files))
+            assert len(scan_files) == len(label_files)
 
             self.scan_files[seq] = scan_files
             self.label_files[seq] = label_files
@@ -113,17 +125,17 @@ class SemanticData():
         return scan
 
     def load_label(self, filename):
-        if '.label' in filename:
+        if ".label" in filename:
             label = np.fromfile(filename, dtype=np.int32)
             label = label.reshape((-1))
             sem_label = label & 0xFFFF  # semantic label in lower half
             # inst_label = label >> 16  # instance id in upper half
             return sem_label
-        elif '.npy' in filename:
+        elif ".npy" in filename:
             label = np.load(filename)
             return label
         else:
-            raise IOError('Neither weak label nor semantic label is found')
+            raise IOError("Neither weak label nor semantic label is found")
 
     def __getitem__(self, dataset_index):
 
@@ -153,35 +165,44 @@ class SemanticData():
         # return self.mean_dxyzf, self.std_dxyzf
         # # ----------------
 
-        mapped_label = (self.label_map[label])  # [0 - 19] in semantic kitti, or [0 - 13] in semantic poss
+        mapped_label = self.label_map[
+            label
+        ]  # [0 - 19] in semantic kitti, or [0 - 13] in semantic poss
 
-        new_weak_label_file = label_file.replace(self.args.dataset_root, self.args.dataset_save). \
-            replace('labels', self.args.weak_label_name).replace('.label', '.npy')
+        new_weak_label_file = (
+            label_file.replace(self.args.dataset_root, self.args.dataset_save)
+            .replace("labels", self.args.weak_label_name)
+            .replace(".label", ".npy")
+        )
 
         # grid sampling
         xyz = o3d.geometry.PointCloud()
         xyz.points = o3d.utility.Vector3dVector(scan[:, :3])
 
-        voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(xyz,
-                                                                    voxel_size=self.args.voxel_size)  # 60,325 => 12,237
+        voxel_grid = o3d.geometry.VoxelGrid.create_from_point_cloud(
+            xyz, voxel_size=self.args.voxel_size
+        )  # 60,325 => 12,237
 
         num_voxel = len(voxel_grid.get_voxels())
         prune_ratio = num_voxel / len(scan)
         if self.args.debug:
-            print('prune to ', num_voxel, prune_ratio)
+            print("prune to ", num_voxel, prune_ratio)
 
         # get voxel coord along the pcd index
-        point2voxel = np.asarray([voxel_grid.get_voxel(pt) for pt in scan[:, :3]])  # (n_p, 3)
-        voxels_coord, point2voxel_map, num_pts_in_voxel = np.unique(point2voxel,
-                                                                    return_index=True,
-                                                                    return_counts=True,
-                                                                    axis=0)
+        point2voxel = np.asarray(
+            [voxel_grid.get_voxel(pt) for pt in scan[:, :3]]
+        )  # (n_p, 3)
+        voxels_coord, point2voxel_map, num_pts_in_voxel = np.unique(
+            point2voxel, return_index=True, return_counts=True, axis=0
+        )
 
         voxel_label = mapped_label[point2voxel_map]  # (n_v, )
         assert len(np.unique(voxel_label)) > 1
 
         # compute voxel number need to label, e.g. point_number * 0.1%
-        sample_voxel = int(np.around(len(scan) * self.args.label_ratio))  # 0.001 = 0.1% , 0.0001 = 0.01%
+        sample_voxel = int(
+            np.around(len(scan) * self.args.label_ratio)
+        )  # 0.001 = 0.1% , 0.0001 = 0.01%
 
         # at least sample 1
         if sample_voxel < 1:
@@ -216,14 +237,16 @@ class SemanticData():
         num_labelled_pts = (point_weak_label > 0).sum()
 
         if self.args.debug:
-            print('Label ratio {}, sampled voxels {}/{}, selected {}/{} ({:.8f}) points to label '
-                  .format(self.args.label_ratio,
-                          sample_voxel,
-                          num_voxel,
-                          num_labelled_pts,
-                          len(scan),
-                          num_labelled_pts / len(scan),
-                          ))
+            print(
+                "Label ratio {}, sampled voxels {}/{}, selected {}/{} ({:.8f}) points to label ".format(
+                    self.args.label_ratio,
+                    sample_voxel,
+                    num_voxel,
+                    num_labelled_pts,
+                    len(scan),
+                    num_labelled_pts / len(scan),
+                )
+            )
 
         for cls in np.arange(20):
             if cls == 0:
@@ -236,66 +259,84 @@ class SemanticData():
             self.class_voxel_num[cls] += cls_voxels
             self.class_pts_num_full[cls] += cls_fully_labelled
 
-        return point_weak_label, new_weak_label_file, current_index, sample_voxel, num_labelled_pts, \
-               self.class_pts_num, self.class_voxel_num, self.class_pts_num_full
+        return (
+            point_weak_label,
+            new_weak_label_file,
+            current_index,
+            sample_voxel,
+            num_labelled_pts,
+            self.class_pts_num,
+            self.class_voxel_num,
+            self.class_pts_num_full,
+        )
 
 
-if __name__ == '__main__':
-    parser = argparse.ArgumentParser(description='')
-    parser.add_argument('--debug',
-                        # default=True,
-                        default=False,
-                        help='if use debug mode, it is a no multi process realization')
-    parser.add_argument('--dataset',
-                        default='SemanticKITTI',
-                        # default='SemanticPOSS',
-                        help='interested dataset'
-                        )
-    parser.add_argument('--dataset_root',
-                        # default='/mnt/cephfs/dataset/pointclouds/semantic-kitti/dataset/sequences/',
-                        # default='/mnt/cephfs/dataset/pointclouds/semantic-poss/dataset/sequences',
-                        help='dataset root'
-                        )
-    parser.add_argument('--dataset_save',
-                        # default='/mnt/cephfs/dataset/pointclouds/semantic-kitti-coarse3d/sequences/',
-                        default='/mnt/cephfs/dataset/pointclouds/semantic-poss-coarse3d/sequences/',
-                        help='the path where you save the weak label, do not recommend to set it same as dataset_root'
-                        )
-    parser.add_argument('--data_config_path',
-                        # default='../../pc_processor/dataset/semantic_kitti/semantic-kitti.yaml',
-                        default='../../pc_processor/dataset/semantic_poss/semantic-poss.yaml',
-                        help='dataset config file'
-                        )
-    parser.add_argument('--sequences',
-                        default=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),  # Semantic KITTI
-                        # default=(0, 1, 2, 3, 4, 5),  # Semantic POSS
-                        type=tuple,
-                        )
-    parser.add_argument('--weak_label_name',
-                        default='0.1',
-                        help='the dir name of generated weak label',
-                        )
-    parser.add_argument('--label_ratio',
-                        default=0.001,
-                        help='0.001=>0.1%, 0.0001=>0.01%,  0.01=>1%'
-                        )
-    parser.add_argument('--voxel_size',
-                        default=0.06,
-                        type=float,
-                        )
-    parser.add_argument('--voxel_propagation',
-                        default=True,
-                        )
+if __name__ == "__main__":
+    parser = argparse.ArgumentParser(description="")
+    parser.add_argument(
+        "--debug",
+        # default=True,
+        default=False,
+        help="if use debug mode, it is a no multi process realization",
+    )
+    parser.add_argument(
+        "--dataset",
+        default="SemanticKITTI",
+        # default='SemanticPOSS',
+        help="interested dataset",
+    )
+    parser.add_argument(
+        "--dataset_root",
+        # default='/mnt/cephfs/dataset/pointclouds/semantic-kitti/dataset/sequences/',
+        # default='/mnt/cephfs/dataset/pointclouds/semantic-poss/dataset/sequences',
+        help="dataset root",
+    )
+    parser.add_argument(
+        "--dataset_save",
+        # default='/mnt/cephfs/dataset/pointclouds/semantic-kitti-coarse3d/sequences/',
+        default="/mnt/cephfs/dataset/pointclouds/semantic-poss-coarse3d/sequences/",
+        help="the path where you save the weak label, do not recommend to set it same as dataset_root",
+    )
+    parser.add_argument(
+        "--data_config_path",
+        # default='../../pc_processor/dataset/semantic_kitti/semantic-kitti.yaml',
+        default="../../pc_processor/dataset/semantic_poss/semantic-poss.yaml",
+        help="dataset config file",
+    )
+    parser.add_argument(
+        "--sequences",
+        default=(0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10),  # Semantic KITTI
+        # default=(0, 1, 2, 3, 4, 5),  # Semantic POSS
+        type=tuple,
+    )
+    parser.add_argument(
+        "--weak_label_name",
+        default="0.1",
+        help="the dir name of generated weak label",
+    )
+    parser.add_argument(
+        "--label_ratio", default=0.001, help="0.001=>0.1%, 0.0001=>0.01%,  0.01=>1%"
+    )
+    parser.add_argument(
+        "--voxel_size",
+        default=0.06,
+        type=float,
+    )
+    parser.add_argument(
+        "--voxel_propagation",
+        default=True,
+    )
     args = parser.parse_args()
 
     dataset = SemanticData(args=args)
 
-    train_loader = torch.utils.data.DataLoader(dataset,
-                                               batch_size=1,
-                                               num_workers=0 if args.debug else 60,
-                                               drop_last=False,
-                                               shuffle=False,
-                                               )
+    train_loader = torch.utils.data.DataLoader(
+        dataset,
+        batch_size=1,
+        num_workers=0 if args.debug else 60,
+        drop_last=False,
+        shuffle=False,
+    )
 
     cnt_voxels = 0  # labelled voxels
     cnt_pts = 0  # labelled points
@@ -311,10 +352,18 @@ if __name__ == '__main__':
     # print('mean dxyzf is {}\n\n'.format(mean_value))
     # print('std dxyzf is {}'.format(std_value))
 
-    for i, (weak, weak_file, current_index, sample_voxel, num_labelled_pts, class_pts_num,
-            class_voxel_num, class_pts_num_full) in enumerate(train_loader):
+    for i, (
+        weak,
+        weak_file,
+        current_index,
+        sample_voxel,
+        num_labelled_pts,
+        class_pts_num,
+        class_voxel_num,
+        class_pts_num_full,
+    ) in enumerate(train_loader):
 
-        print('save ', weak_file[0])
+        print("save ", weak_file[0])
         np.save(weak_file[0], weak)
 
         cnt_voxels = cnt_voxels + np.asarray(sample_voxel[0])
@@ -329,21 +378,24 @@ if __name__ == '__main__':
             break
 
     # log
-    with open('./log_{}_ratio-{}_voxel_-{}_prop-{}.txt'.
-                      format(args.dataset, args.label_ratio, args.voxel_size, args.voxel_propagation), "w") as f:
+    with open(
+        "./log_{}_ratio-{}_voxel_-{}_prop-{}.txt".format(
+            args.dataset, args.label_ratio, args.voxel_size, args.voxel_propagation
+        ),
+        "w",
+    ) as f:
 
-        f.write("\n\n\n{} \n".format('*' * 20))
+        f.write("\n\n\n{} \n".format("*" * 20))
 
         for i in args._get_kwargs():
-            f.write('{} \n'.format(i))
+            f.write("{} \n".format(i))
 
-        f.write("\n\n\n{} \n".format('*' * 20))
+        f.write("\n\n\n{} \n".format("*" * 20))
         f.write("per class voxels \n")
-        f.write("{} \n".format('*' * 20))
+        f.write("{} \n".format("*" * 20))
 
         for cls in np.arange(len(cnt_class_pts_num)):
-            f.write('{}: {}\n'.format(cls, cnt_class_voxel_num[cls]))
-
+            f.write("{}: {}\n".format(cls, cnt_class_voxel_num[cls]))
 
         # f.write("\n\n\n{} \n".format('*' * 20))
         #

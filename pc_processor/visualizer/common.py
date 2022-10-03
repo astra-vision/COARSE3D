@@ -2,21 +2,26 @@
 import open3d
 import numpy as np
 
+
 def loadPCD(path):
     points = np.fromfile(path, dtype=np.float32).reshape(-1, 4)
     points = points[:, :3]
     return points
-    
+
+
 def getPointCloud(pcd: np.ndarray, colors=None):
     assert len(pcd.shape) == 2 and pcd.shape[1] == 3, "invalid pcd shape: {}".format(
-        pcd.shape)
+        pcd.shape
+    )
     point_cloud = open3d.geometry.PointCloud()
     point_cloud.points = open3d.utility.Vector3dVector(pcd)
     if colors is not None:
-        assert len(colors.shape) == 2 and colors.shape[1] == 3, "invalid colors shape: {}".format(
-            colors.shape)
+        assert (
+            len(colors.shape) == 2 and colors.shape[1] == 3
+        ), "invalid colors shape: {}".format(colors.shape)
         point_cloud.colors = open3d.utility.Vector3dVector(colors)
     return point_cloud
+
 
 # # cannot show 2d image with open3d
 # def getRGBImage(image: np.ndarray):
