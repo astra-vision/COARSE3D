@@ -26,7 +26,7 @@ year={2022},
 
 # Teaser
 
-<img src="./Figures/newgif-crop-12m.gif" style="zoom: 200%;" />
+<img src="./Figures/newgif-crop.gif" style="zoom: 200%;" />
 
 
 # Content
