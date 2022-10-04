@@ -1,13 +1,12 @@
 
 
-**COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation** (BMVC 2022)
+**COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation (BMVC 2022)** 
 
 [Rong Li <sup>1</sup>](https://rongli.tech/),
 [Anh-Quan Cao <sup>2</sup>](https://anhquancao.github.io),
 [Raoul de Charette <sup>2</sup>](https://team.inria.fr/rits/membres/raoul-de-charette/)  
 <sup>1</sup>SCUT, China. <sup>2</sup>Inria, France
 
-<!---[![arXiv](https://img.shields.io/badge/arXiv%20%2B%20supp-2112.00722-purple)](https://xxx)--->
 
 [![arXiv](https://img.shields.io/badge/arXiv-Paper-purple.svg)]()
 
@@ -27,7 +26,7 @@ year={2022},
 
 # Teaser
 
-<img src="./Figures/ezgif-2-986f8bf4fb.gif" style="zoom: 200%;" />
+<img src="./Figures/newgif-crop-12m.gif" style="zoom: 200%;" />
 
 
 # Content
@@ -185,7 +184,8 @@ Download the trained model you are interested, and put it on the `checkpoint` of
 
 
 ## Acknowledgement
-This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1). Rong Li was funded by the South China University of Technology Machine Intelligence Laboratory([SMIL](https://tanmingkui.github.io/laboratory_students/)).
+This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1). Inria members were partly funded by French project SIGHT (ANR-20-CE23-0016). 
+Rong Li was funded by the South China University of Technology Machine Intelligence Laboratory([SMIL](https://tanmingkui.github.io/laboratory_students/)) and received support and advices from Prof. Mingkui Tan, Prof. Yuanqing Li, Prof. Caixia Li and Zhuangwei Zhuang.
 
 
 ## License
