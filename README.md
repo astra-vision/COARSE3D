@@ -8,13 +8,13 @@
 <sup>1</sup>SCUT, China. <sup>2</sup>Inria, France
 
 
-[![arXiv](https://img.shields.io/badge/arXiv-Paper-purple.svg)]()
+[![arXiv](https://img.shields.io/badge/arXiv-Paper-purple.svg)](https://arxiv.org/pdf/2210.01784.pdf)
 
 <!---![visitors](https://visitor-badge.glitch.me/badge?page_id=cv-rits/COARSE3D)--->
 
 ![ARCH](./Figures/arch.png)
 
-If you find this work or code useful, please cite our [paper](https://arxiv.org/abs/xxx) and [give this repo a star](https://github.com/cv-rits/COARSE3D/stargazers):
+If you find this work or code useful, please cite our [paper](https://arxiv.org/pdf/2210.01784.pdf) and [give this repo a star](https://github.com/cv-rits/COARSE3D/stargazers):
 ```
 @inproceedings{coarse3d,
 title={COARSE3D: Class-Prototypes for Contrastive Learning in Weakly-Supervised 3D Point Cloud Segmentation},
