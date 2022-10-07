@@ -184,8 +184,7 @@ Download the trained model you are interested, and put it on the `checkpoint` of
 
 
 ## Acknowledgement
-This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1). Inria members were partly funded by French project SIGHT (ANR-20-CE23-0016). 
-Rong Li was funded by the South China University of Technology Machine Intelligence Laboratory([SMIL](https://tanmingkui.github.io/laboratory_students/)) and received support and advices from Prof. Mingkui Tan, Prof. Yuanqing Li, Prof. Caixia Li and Zhuangwei Zhuang.
+ Rong Li was supported by the SMIL lab of South China University of Technolog, received support and advices from Prof. Mingkui Tan, Prof. Caixia Li and Zhuangwei Zhuang. Rong Li was also partly supported by Key-Area Research and Development Program Guangdong Province (2019B010155001). Inria members were partly funded by French project SIGHT (ANR-20-CE23-0016). This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1).
 
 
 ## License
