@@ -184,7 +184,7 @@ Download the trained model you are interested, and put it on the `checkpoint` of
 
 
 ## Acknowledgement
- Rong Li was supported by the SMIL lab of South China University of Technolog, received support and advices from Prof. Mingkui Tan, Prof. Caixia Li and Zhuangwei Zhuang. Rong Li was also partly supported by Key-Area Research and Development Program Guangdong Province (2019B010155001). Inria members were partly funded by French project SIGHT (ANR-20-CE23-0016). This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1).
+ Rong Li was supported by the SMIL lab of South China University of Technolog, received support and advices from Prof. Mingkui Tan, Prof. Caixia Li and Zhuangwei Zhuang. Inria members were partly funded by French project SIGHT (ANR-20-CE23-0016). This work was performed using HPC resources from GENCI–IDRIS (Grant 2021-AD011012808 and 2022-AD011012808R1). We would also like to thank Ivan Lopes for the video voice-over.
 
 
 ## License
