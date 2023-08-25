@@ -171,12 +171,12 @@ year={2022},
 
  **Dataset**   | **Anno. (%)** | **Val mIoU (%)** | **Trained Model** 
 :-------------:|:--------------:|:------------:|:-----------------:
- SemanticKITTI | 0.01          | 47.35        | [Google Drive](https://drive.google.com/file/d/18KLAppY17ukrpd-A8_ywd2WojBUePowy/view?usp=sharing)  
-  </br>        | 0.1           | 57.57        | [Google Drive](https://drive.google.com/file/d/1VPx8MDM-Ty0D4prd_c38FpWVEKWj2lxq/view?usp=sharing)  
- SemanticPOSS  | 0.01          | 31.10        | [Google Drive](https://drive.google.com/file/d/1buMlljeQArvQc4jFI5ri1H7n-Wg80iH4/view?usp=sharing)  
-  </br>        | 0.1           | 43.00        | [Google Drive](https://drive.google.com/file/d/1O2CPnU25PTSVlrijMSyQ6Lji_FWaL_ZU/view?usp=sharing)  
- nuScenes      | 0.01          | 42.90        | [Google Drive](https://drive.google.com/file/d/1aT7kHXTZYK51NBRsdIGw6xogcESFLN2N/view?usp=sharing)  
-  </br>        | 0.1           | 58.70        | [Google Drive](https://drive.google.com/file/d/18eyAghfzxGWV8Kvqlb73w0QMlMt55YxJ/view?usp=sharing)
+ SemanticKITTI | 0.01          | 47.35        | [link](https://github.com/astra-vision/COARSE3D/releases/download/weights/SemanticKITTI_0.01percent.pth)  
+  </br>        | 0.1           | 57.57        | [link](https://github.com/astra-vision/COARSE3D/releases/download/weights/SemanticKITTI_0.1percent.pth)  
+ SemanticPOSS  | 0.01          | 31.10        | [link](https://github.com/astra-vision/COARSE3D/releases/download/weights/SemanticPOSS_0.01_percent.pth)  
+  </br>        | 0.1           | 43.00        | [link](https://github.com/astra-vision/COARSE3D/releases/download/weights/SemanticPOSS_0.1_percent.pth)  
+ nuScenes      | 0.01          | 42.90        | [link](https://github.com/astra-vision/COARSE3D/releases/download/weights/nuscenes_0.01_percent.pth)  
+  </br>        | 0.1           | 58.70        | [link](https://github.com/astra-vision/COARSE3D/releases/download/weights/nuscenes_0.1_percent.pth)
 
 <!--- 
 Download the trained model you are interested, and put it on the `checkpoint` of config file. 
